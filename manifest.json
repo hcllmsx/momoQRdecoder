@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "QRdecoder",
+  "name": "momoQRdecoder",
   "version": "1.2.0",
   "description": "自动扫描当前网页二维码并解码，支持延迟扫描、复制和新标签页打开。",
   "icons": {
-    "16": "src/qrdecoder-icon.png",
-    "32": "src/qrdecoder-icon.png",
-    "48": "src/qrdecoder-icon.png",
-    "128": "src/qrdecoder-icon.png"
+    "16": "src/momoqrdecoder-icon.png",
+    "32": "src/momoqrdecoder-icon.png",
+    "48": "src/momoqrdecoder-icon.png",
+    "128": "src/momoqrdecoder-icon.png"
   },
   "permissions": [
     "activeTab",
@@ -21,7 +21,7 @@
   },
   "action": {
     "default_popup": "src/popup.html",
-    "default_icon": "src/qrdecoder-icon.png"
+    "default_icon": "src/momoqrdecoder-icon.png"
   },
   "host_permissions": [
     "<all_urls>"

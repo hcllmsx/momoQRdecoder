@@ -1,13 +1,13 @@
 // 页面右上角二维码识别结果悬浮通知
 (function(){
-  if (window.__qrdecoder_notify) return;
+  if (window.__momoqrdecoder_notify) return;
   function showQRNotify(payload) {
     // 清理旧的
-    if (window.__qrdecoder_notify) window.__qrdecoder_notify.remove();
+    if (window.__momoqrdecoder_notify) window.__momoqrdecoder_notify.remove();
     const box = document.createElement('div');
     box.style = 'position:fixed;top:20px;right:24px;z-index:999999;font-size:15px;background:#fff;box-shadow:0 2px 16px rgba(0,0,0,0.16);border-radius:8px;padding:16px 18px 14px 18px;min-width:260px;max-width:420px;color:#222;line-height:1.7;';
     box.style.transition = 'opacity 0.25s';
-    box.id = '__qrdecoder_notify';
+    box.id = '__momoqrdecoder_notify';
     let html = '';
     if (payload.error) {
       html += `<div style='font-weight:bold;color:#e53935;font-size:16px;margin-bottom:6px;'>二维码识别失败</div>`;
@@ -55,24 +55,24 @@
     btnClose.onclick = ()=>box.remove();
     box.appendChild(btnClose);
     document.body.appendChild(box);
-    window.__qrdecoder_notify = box;
+    window.__momoqrdecoder_notify = box;
     setTimeout(()=>{
-      if (window.__qrdecoder_notify) window.__qrdecoder_notify.style.opacity = '1';
+      if (window.__momoqrdecoder_notify) window.__momoqrdecoder_notify.style.opacity = '1';
     }, 50);
     // 自动消失
     setTimeout(()=>{
-      if (window.__qrdecoder_notify) window.__qrdecoder_notify.remove();
+      if (window.__momoqrdecoder_notify) window.__momoqrdecoder_notify.remove();
     }, 12000);
   }
   // 允许 background.js 直接发消息
   chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
-    if (msg && msg.__qrdecoder_notify) {
-      showQRNotify(msg.__qrdecoder_notify);
+    if (msg && msg.__momoqrdecoder_notify) {
+      showQRNotify(msg.__momoqrdecoder_notify);
     }
   });
   window.addEventListener('message', function(e) {
-    if (e.data && e.data.__qrdecoder_notify) {
-      showQRNotify(e.data.__qrdecoder_notify);
+    if (e.data && e.data.__momoqrdecoder_notify) {
+      showQRNotify(e.data.__momoqrdecoder_notify);
     }
   });
 })();

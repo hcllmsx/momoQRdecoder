@@ -319,8 +319,8 @@ function startRegionSelect() {
 
 // 监听内容脚本的区域坐标，后台截图并裁剪
 window.addEventListener('message', function(e) {
-  if (!e.data || !e.data.qrdecoder_region) return;
-  const {x, y, w, h} = e.data.qrdecoder_region;
+  if (!e.data || !e.data.momoqrdecoder_region) return;
+  const {x, y, w, h} = e.data.momoqrdecoder_region;
   // 通知popup后台截图
   chrome.runtime.sendMessage({action: 'captureScreenshot'}, (response) => {
     if (!response || response.error) {

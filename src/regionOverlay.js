@@ -1,10 +1,10 @@
 // 区域截图内容脚本
-if (window.__qrdecoder_overlay) { /* 已有遮罩，避免重复 */ } else {
+if (window.__momoqrdecoder_overlay) { /* 已有遮罩，避免重复 */ } else {
 const overlay = document.createElement('div');
 overlay.style = 'position:fixed;z-index:999999;background:rgba(0,0,0,0.3);top:0;left:0;right:0;bottom:0;cursor:crosshair;';
-overlay.id = '__qrdecoder_overlay';
+overlay.id = '__momoqrdecoder_overlay';
 document.body.appendChild(overlay);
-window.__qrdecoder_overlay = overlay;
+window.__momoqrdecoder_overlay = overlay;
 
 let startX, startY, endX, endY, selecting = false, rect;
 overlay.addEventListener('mousedown', function(e) {
@@ -51,7 +51,7 @@ overlay.addEventListener('mouseup', function(e) {
   });
   setTimeout(()=>{
     overlay.remove();
-    window.__qrdecoder_overlay = null;
+    window.__momoqrdecoder_overlay = null;
   }, 100);
 });
 }
