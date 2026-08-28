@@ -104,19 +104,19 @@
 </head>
 <body>
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-    <h2 id="extName" style="margin:0; font-size:20px;">默默二维码解码器</h2>
+    <h2 id="extName" style="margin:0; font-size:20px;"></h2>
     <span id="version" class="version-badge"></span>
   </div>
   <div class="btn-group" style="text-align:center; margin-bottom: 2px;">
-    <button class="btn" id="scanBtn">立即扫描</button>
-    <button class="btn" id="delayBtn">延迟扫描</button>
+    <button class="btn" id="scanBtn" data-i18n="scanNow"></button>
+    <button class="btn" id="delayBtn" data-i18n="delayScan"></button>
   </div>
   <div class="btn-group" style="text-align:center; margin-bottom: 8px;">
-    <button class="btn" id="regionBtn">区域截图</button>
-    <button class="btn" id="uploadBtn">手动上传</button>
+    <button class="btn" id="regionBtn" data-i18n="regionShot"></button>
+    <button class="btn" id="uploadBtn" data-i18n="uploadImage"></button>
   </div>
   <div id="countdown" style="display:none;"></div>
-  <div id="loading" style="display:none;"><span class="spinner"></span>正在扫描二维码...</div>
+  <div id="loading" style="display:none;"><span class="spinner"></span><span data-i18n="scanning"></span></div>
   <div id="result" style="display:none;"></div>
   <div id="error" style="display:none;"></div>
   <footer class="footer">

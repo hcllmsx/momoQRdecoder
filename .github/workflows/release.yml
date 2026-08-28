@@ -58,7 +58,7 @@ jobs:
       - name: Build extension zip
         run: |
           mkdir -p dist
-          zip -r "dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip" manifest.json src
+          zip -r "dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip" manifest.json _locales src
           # 打印 zip 内容清单，确认无 ../ 父目录访问器
           unzip -l "dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip"
           ls -lh dist/

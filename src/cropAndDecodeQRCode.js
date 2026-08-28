@@ -3,6 +3,9 @@
 //   decodeImageDataUrl(dataUrl)              —— 整图识别
 //   cropAndDecodeQRCode(dataUrl, x, y, w, h) —— 指定区域识别
 
+// 本地化辅助（service worker 中可用 chrome.i18n）
+function t(key, subs) { return chrome.i18n.getMessage(key, subs) || key; }
+
 function dataURLToBlob(dataurl) {
   const arr = dataurl.split(',');
   const mime = (arr[0].match(/:(.*?);/) || [null, 'image/png'])[1];
@@ -55,7 +58,7 @@ function scanForQRCodes(ctx, ox, oy, width, height) {
     }
   }
   const uniq = Array.from(new Set(results));
-  if (uniq.length === 0) return {error: '未检测到二维码'};
+  if (uniq.length === 0) return {error: t('noQrDetected')};
   if (uniq.length === 1) return {data: uniq[0]};
   return {multi: uniq};
 }
@@ -66,7 +69,7 @@ async function decodeImageDataUrl(dataUrl) {
     const {ctx, width, height} = await loadImageToCtx(dataUrl);
     return scanForQRCodes(ctx, 0, 0, width, height);
   } catch (e) {
-    return {error: '图片加载失败'};
+    return {error: t('imageLoadFailed')};
   }
 }
 
@@ -78,9 +81,9 @@ async function cropAndDecodeQRCode(dataUrl, x, y, w, h) {
     const cy = Math.max(0, Math.min(Math.round(y), height));
     const cw = Math.min(Math.round(w), width - cx);
     const ch = Math.min(Math.round(h), height - cy);
-    if (cw <= 0 || ch <= 0) return {error: '未检测到二维码'};
+    if (cw <= 0 || ch <= 0) return {error: t('noQrDetected')};
     return scanForQRCodes(ctx, cx, cy, cw, ch);
   } catch (e) {
-    return {error: '图片加载失败'};
+    return {error: t('imageLoadFailed')};
   }
 }

@@ -1,0 +1,68 @@
+{
+  "extName": { "message": "Momo QR Decoder" },
+  "extDesc": { "message": "Automatically scans and decodes QR codes on the current webpage. Supports delayed scanning, copying, and opening in a new tab." },
+  "extTitle": { "message": "Momo QR Decoder" },
+
+  "scanNow": { "message": "Scan Now" },
+  "delayScan": { "message": "Delay Scan" },
+  "regionShot": { "message": "Region Select" },
+  "uploadImage": { "message": "Upload Image" },
+  "scanning": { "message": "Scanning for QR code..." },
+
+  "copyContent": { "message": "Copy" },
+  "copyAll": { "message": "Copy" },
+  "copied": { "message": "Copied!" },
+  "copyFailed": { "message": "Copy failed" },
+  "openNewTab": { "message": "Open in New Tab" },
+  "openNewTabFailed": { "message": "Failed to open new tab: $1" },
+
+  "multiSame": { "message": "Multiple QR codes detected, identical content:" },
+  "multiList": { "message": "Multiple QR codes detected:" },
+  "qrN": { "message": "QR $1:" },
+  "backendNoResponse": { "message": "Background not responding" },
+  "secondsLeft": { "message": "$1s" },
+  "regionSecondsLeft": { "message": "Region select in $1s" },
+
+  "readClipboard": { "message": "Read Clipboard" },
+  "clipboardReadFail": { "message": "Failed to read image from clipboard" },
+  "clipboardNoImage": { "message": "No image found in clipboard" },
+  "clipboardUnsupported": { "message": "Clipboard image reading is not supported by this browser" },
+  "clipboardFail": { "message": "Failed to read clipboard: $1" },
+  "uploadFile": { "message": "Choose File" },
+  "fileReadFail": { "message": "Failed to read file" },
+
+  "noActiveTab": { "message": "No active tab found" },
+  "injectFail": { "message": "Failed to inject script: $1" },
+  "dragHint": { "message": "Drag on the page to select a region" },
+
+  "qrScanFailed": { "message": "QR code recognition failed" },
+  "multiDetected": { "message": "Multiple QR codes detected" },
+  "qrContent": { "message": "QR Code Content" },
+
+  "fetchingView": { "message": "Capturing view..." },
+  "dragSelect": { "message": "Drag to select a QR code area · Esc to cancel" },
+  "screenshotFailedQuit": { "message": "Screenshot failed, selection canceled" },
+  "commFailed": { "message": "Extension communication failed, selection canceled" },
+
+  "regionShotFail": { "message": "Unable to select region on this page: $1" },
+  "screenshotFailedPage": { "message": "Screenshot failed, could not capture the page." },
+  "screenshotFail": { "message": "Screenshot failed: $1" },
+  "unknownError": { "message": "Unknown error" },
+  "noImageData": { "message": "No image data received" },
+
+  "offscreenUnsupported": { "message": "Offscreen API not supported by this browser" },
+  "wechatEngineUnavailable": { "message": "WeChat engine unavailable: $1" },
+  "wechatEngineNoResponse": { "message": "WeChat engine not responding" },
+  "wechatEngineStartFailed": { "message": "Failed to start WeChat engine: $1" },
+  "wechatDecodeFailed": { "message": "WeChat engine decode failed: $1" },
+  "engineNoResponse": { "message": "Engine not responding" },
+  "noQrDetected": { "message": "No QR code detected" },
+  "imageLoadFailed": { "message": "Failed to load image" },
+
+  "offscreenJustification": { "message": "Use the WeChat QR engine to decode artistic QR codes" },
+
+  "modelReadFail": { "message": "Failed to read model" },
+  "modelLoadFail": { "message": "Failed to load model: $1" },
+  "wechatInitFailed": { "message": "WeChat engine initialization failed: $1" },
+  "wechatTimeout": { "message": "WeChat engine response timed out" }
+}

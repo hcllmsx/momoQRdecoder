@@ -11,6 +11,9 @@
 //   请求  {type: 'wechatDecode', dataUrl: <data:image/...>}
 //   响应  {data: string} | {multi: string[]} | {error: string}
 
+// 本地化辅助（offscreen 页面可用 chrome.i18n）
+function t(key, subs) { return chrome.i18n.getMessage(key, subs) || key; }
+
 const SANDBOX_URL = chrome.runtime.getURL('src/sandbox.html');
 const MODEL_DETECT = chrome.runtime.getURL('src/models/detect.caffemodel');
 const MODEL_SR = chrome.runtime.getURL('src/models/sr.caffemodel');
@@ -37,7 +40,7 @@ function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(fr.result);
-    fr.onerror = () => reject(new Error('模型读取失败'));
+    fr.onerror = () => reject(new Error(t('modelReadFail')));
     fr.readAsDataURL(blob);
   });
 }
@@ -54,7 +57,7 @@ function sendModelsToSandbox() {
     const sw = await fetchModelAsDataUrl(MODEL_SR);
     sandboxFrame.contentWindow.postMessage({ type: 'models', dw: dw, sw: sw }, '*');
   })().catch((e) => {
-    setSandboxError('模型加载失败: ' + (e && e.message || e));
+    setSandboxError(t('modelLoadFail', [e && e.message || e]));
   });
 }
 
@@ -83,7 +86,7 @@ window.addEventListener('message', (e) => {
     sandboxReady = true;
     while (pendingRequests.length) postToSandbox(pendingRequests.shift());
   } else if (msg.type === 'sandboxError') {
-    setSandboxError('微信引擎初始化失败: ' + (msg.error || '未知错误'));
+    setSandboxError(t('wechatInitFailed', [msg.error || t('unknownError')]));
   } else if (msg.type === 'decodeResult') {
     const entry = callbacks.get(msg.id);
     if (entry) {
@@ -110,7 +113,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   entry.timer = setTimeout(() => {
     if (callbacks.has(id)) {
       callbacks.delete(id);
-      entry.respond({ error: '微信引擎响应超时' });
+      entry.respond({ error: t('wechatTimeout') });
     }
   }, 60000);
   callbacks.set(id, entry);

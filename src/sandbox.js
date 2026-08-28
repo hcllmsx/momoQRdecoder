@@ -58,20 +58,21 @@ async function handleDecode(msg) {
     qr.clear();
     const res = qr.load(imageData);
     if (!res) {
-      result = { error: '引擎无响应' };
+      result = { error: 'ENGINE_NO_RESPONSE' };
     } else {
       const infos = res.getInfos();
       const sizes = res.getSizes();
       res.clear();
       if (infos.length === 0) {
-        result = { error: '未检测到二维码' };
+        result = { error: 'NO_QR_DETECTED' };
       } else {
         const uniq = Array.from(new Set(infos));
         result = uniq.length === 1 ? { data: uniq[0], sizes: sizes } : { multi: uniq, sizes: sizes };
       }
     }
   } catch (e) {
-    result = { error: '微信引擎解码失败: ' + (e && e.message || e) };
+    // 沙箱无 chrome.* API，只能返回纯英文错误码，由 background 统一翻译
+    result = { error: 'WECHAT_DECODE_FAILED: ' + (e && e.message || e) };
   }
   reply(result);
 }
@@ -92,7 +93,7 @@ function dataUrlToImageData(dataUrl) {
         reject(e);
       }
     };
-    img.onerror = () => reject(new Error('图片加载失败'));
+    img.onerror = () => reject(new Error('IMAGE_LOAD_FAILED'));
     img.src = dataUrl;
   });
 }

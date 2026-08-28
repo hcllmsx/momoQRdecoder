@@ -3,6 +3,39 @@
 // 相对路径以本文件所在 src/ 为基准，勿加 src/ 前缀）
 importScripts('jsQR.js', 'cropAndDecodeQRCode.js');
 
+// ---------- 本地化辅助 ----------
+// service worker 中可直接使用 chrome.i18n；取不到翻译时回退 key
+function t(key, subs) { return chrome.i18n.getMessage(key, subs) || key; }
+
+// 沙箱(sandbox.js)内没有 chrome.* API，无法本地化，因此它只返回
+// 纯英文错误码；这些码在这里统一翻译成当前语言。offscreen 已本地化
+// 的文本不含冒号前缀，会原样透传。
+const ERR_MAP = {
+  'ENGINE_NO_RESPONSE': 'engineNoResponse',
+  'NO_QR_DETECTED': 'noQrDetected',
+  'IMAGE_LOAD_FAILED': 'imageLoadFailed',
+  'WECHAT_DECODE_FAILED': 'wechatDecodeFailed',
+  'WECHAT_ENGINE_UNREACHABLE': 'wechatEngineUnavailable'
+};
+
+function localizeError(err) {
+  if (typeof err !== 'string') return err;
+  const m = err.match(/^(WECHAT_DECODE_FAILED|WECHAT_ENGINE_UNREACHABLE): ([\s\S]*)$/);
+  if (m) {
+    const detail = ERR_MAP[m[2]] ? t(ERR_MAP[m[2]]) : m[2];
+    return t(ERR_MAP[m[1]], [detail]);
+  }
+  return ERR_MAP[err] ? t(ERR_MAP[err]) : err;
+}
+
+// 判断微信引擎是否"不可用/无响应"（含浏览器语言下的本地化文本，兼容判断）
+function isWechatUnreachable(err) {
+  if (typeof err !== 'string') return false;
+  return err === 'ENGINE_NO_RESPONSE'
+    || err.indexOf('WECHAT_ENGINE_UNREACHABLE') === 0
+    || /无响应|不可用|Receiving end|unavailable|not responding/i.test(err);
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // 注入区域截图脚本（popup 发起）
   if (msg.action === 'injectRegionScript') {
@@ -11,7 +44,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       files: ['src/regionOverlay.js']
     }, () => {
       if (chrome.runtime.lastError) {
-        sendResponse({error: '无法在当前页面进行区域截图：' + chrome.runtime.lastError.message});
+        sendResponse({error: t('regionShotFail', [chrome.runtime.lastError.message])});
       } else {
         sendResponse({ok: true});
       }
@@ -29,7 +62,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (!dataUrl || chrome.runtime.lastError) {
         chrome.tabs.sendMessage(tabId, {
           __momoqrdecoder_select_screenshot: null,
-          __momoqrdecoder_select_screenshot_error: '截图失败，无法获取页面内容。'
+          __momoqrdecoder_select_screenshot_error: t('screenshotFailedPage')
         });
         return;
       }
@@ -55,7 +88,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // 兼容旧协议（未携带 dataUrl）：重新截屏后裁剪
     chrome.tabs.captureVisibleTab(sender.tab.windowId, {format: 'png'}, (dataUrl) => {
       if (!dataUrl || chrome.runtime.lastError) {
-        done({error: '截图失败，无法获取页面内容。'});
+        done({error: t('screenshotFailedPage')});
         return;
       }
       cropAndDecodeQRCode(dataUrl, x, y, w, h)
@@ -69,7 +102,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'decodeScreenshot') {
     chrome.tabs.captureVisibleTab(null, {format: 'png'}, (dataUrl) => {
       if (!dataUrl || chrome.runtime.lastError) {
-        sendResponse({error: '截图失败: ' + (chrome.runtime.lastError ? chrome.runtime.lastError.message : '未知错误')});
+        sendResponse({error: t('screenshotFail', [chrome.runtime.lastError ? chrome.runtime.lastError.message : t('unknownError')])});
         return;
       }
       decodeWithFallback(dataUrl).then(sendResponse);
@@ -80,7 +113,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // 图片解码（popup 上传文件/剪贴板）
   if (msg.action === 'decodeImageDataUrl') {
     if (!msg.dataUrl || typeof msg.dataUrl !== 'string') {
-      sendResponse({error: '未收到图片数据'});
+      sendResponse({error: t('noImageData')});
       return;
     }
     decodeWithFallback(msg.dataUrl).then(sendResponse);
@@ -115,7 +148,7 @@ function ensureOffscreen() {
   if (offscreenReady) return offscreenReady;
   offscreenReady = (async () => {
     if (typeof chrome.offscreen !== 'object' || !chrome.offscreen.createDocument) {
-      throw new Error('当前浏览器不支持 offscreen API');
+      throw new Error(t('offscreenUnsupported'));
     }
     // Chrome 116+ 有 hasDocument()；旧版本直接尝试创建，
     // 若已存在会报错，此时当作已就绪处理。
@@ -132,7 +165,7 @@ function ensureOffscreen() {
         await chrome.offscreen.createDocument({
           url: 'src/offscreen.html',
           reasons: ['BLOBS'],
-          justification: '使用微信 QR 引擎解码美化二维码'
+          justification: t('offscreenJustification')
         });
       } catch (e) {
         // "文档已存在"等场景：若创建失败因文档已在，视为就绪
@@ -160,14 +193,15 @@ function sendWechatDecode(dataUrl, retries) {
             setTimeout(() => attempt(left - 1), 1500);
             return;
           }
-          resolve({error: '微信引擎不可用: ' + chrome.runtime.lastError.message});
+          // offscreen 可能被回收/不可达：用错误码，最后由 localizeError 统一翻译
+          resolve({error: 'WECHAT_ENGINE_UNREACHABLE: ' + chrome.runtime.lastError.message});
           return;
         }
-        if (!resp) { resolve({error: '微信引擎无响应'}); return; }
+        if (!resp) { resolve({error: 'ENGINE_NO_RESPONSE'}); return; }
         if (resp.error) { resolve({error: resp.error}); return; }
         if (resp.data) { resolve({data: resp.data}); return; }
         if (resp.multi) { resolve({multi: resp.multi}); return; }
-        resolve({error: '未检测到二维码'});
+        resolve({error: 'NO_QR_DETECTED'});
       });
     };
     attempt(retries);
@@ -181,13 +215,13 @@ function decodeWithWechatEngine(dataUrl) {
     let resp = await sendWechatDecode(dataUrl, 3);
     // offscreen 文档可能已被 Chrome 闲置回收（Receiving end does not exist），
     // 重建文档后重试一次。
-    if (resp.error && /不可用|无响应/i.test(resp.error)) {
+    if (resp.error && isWechatUnreachable(resp.error)) {
       offscreenReady = null;
       await ensureOffscreen();
       resp = await sendWechatDecode(dataUrl, 2);
     }
     return resp;
-  })().catch((e) => ({error: '微信引擎启动失败: ' + (e && e.message || e)}));
+  })().catch((e) => ({error: t('wechatEngineStartFailed', [e && e.message || e])}));
 }
 
 // 统一解码入口：jsQR 失败时自动回退微信引擎
@@ -197,7 +231,7 @@ async function decodeWithFallback(dataUrl) {
   const wechatResult = await decodeWithWechatEngine(dataUrl);
   if (!wechatResult.error) return wechatResult;
   // 微信引擎明确报"未检测到二维码"时保留 jsQR 的提示；
-  // 若微信引擎本身启动失败/不可用，则透传其真实原因，便于定位。
-  if (/未检测到二维码/.test(wechatResult.error)) return result;
-  return {error: wechatResult.error};
+  // 若微信引擎本身启动失败/不可用，则透传其真实原因（含错误码翻译），便于定位。
+  if (wechatResult.error === 'NO_QR_DETECTED' || /未检测到二维码/.test(wechatResult.error)) return result;
+  return {error: localizeError(wechatResult.error)};
 }

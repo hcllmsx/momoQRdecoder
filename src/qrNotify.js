@@ -4,6 +4,9 @@
   if (window.__momoqrdecoder_notify_installed) return;
   window.__momoqrdecoder_notify_installed = true;
 
+  // 本地化辅助（content script 可直接使用 chrome.i18n）
+  function t(key, subs) { return chrome.i18n.getMessage(key, subs) || key; }
+
   const BTN_STYLE = 'background:#2196f3;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:14px;';
 
   // 复制文本：优先 Clipboard API，失败时回退 execCommand（content script 中常见）
@@ -35,7 +38,7 @@
 
   function flashBtn(btn, okText) {
     btn.textContent = okText;
-    setTimeout(function () { btn.textContent = '复制内容'; }, 1200);
+    setTimeout(function () { btn.textContent = t('copyContent'); }, 1200);
   }
 
   function showQRNotify(payload) {
@@ -50,14 +53,14 @@
     const title = document.createElement('div');
     title.style.cssText = 'font-weight:bold;font-size:16px;margin-bottom:6px;';
     if (payload.error) {
-      title.textContent = '二维码识别失败';
+      title.textContent = t('qrScanFailed');
       title.style.color = '#e53935';
       const body = document.createElement('div');
       body.textContent = payload.error;
       box.appendChild(title);
       box.appendChild(body);
     } else if (payload.multi) {
-      title.textContent = '识别到多个二维码';
+      title.textContent = t('multiDetected');
       title.style.color = '#2196f3';
       box.appendChild(title);
       payload.multi.forEach(function (text, idx) {
@@ -65,7 +68,7 @@
         row.style.cssText = 'margin-bottom:7px;';
         const label = document.createElement('span');
         label.style.cssText = 'color:#666;font-size:13px;';
-        label.textContent = '二维码' + (idx + 1) + '：';
+        label.textContent = t('qrN', [idx + 1]);
         const content = document.createElement('span');
         content.style.color = '#222';
         content.textContent = text;
@@ -74,7 +77,7 @@
         box.appendChild(row);
       });
     } else {
-      title.textContent = '二维码内容';
+      title.textContent = t('qrContent');
       title.style.color = '#4caf50';
       const body = document.createElement('div');
       body.style.cssText = 'word-break:break-all;';
@@ -88,11 +91,11 @@
     btns.style.cssText = 'margin-top:10px;text-align:right;';
 
     const btnCopy = document.createElement('button');
-    btnCopy.textContent = '复制内容';
+    btnCopy.textContent = t('copyContent');
     btnCopy.style.cssText = 'margin-right:10px;' + BTN_STYLE;
     btnCopy.onclick = function () {
       const txt = payload.multi ? payload.multi.join('\n') : (payload.data || payload.error || '');
-      copyText(txt, function () { flashBtn(btnCopy, '已复制!'); }, function () { flashBtn(btnCopy, '复制失败'); });
+      copyText(txt, function () { flashBtn(btnCopy, t('copied')); }, function () { flashBtn(btnCopy, t('copyFailed')); });
     };
     btns.appendChild(btnCopy);
 
@@ -100,7 +103,7 @@
     const url = payload.data;
     if (url && /^https?:\/\//i.test(url)) {
       const btnOpen = document.createElement('button');
-      btnOpen.textContent = '新标签页打开';
+      btnOpen.textContent = t('openNewTab');
       btnOpen.style.cssText = 'background:#4caf50;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:14px;';
       btnOpen.onclick = function () { window.open(url, '_blank'); };
       btns.appendChild(btnOpen);

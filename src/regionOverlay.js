@@ -9,13 +9,16 @@
 (function () {
   if (window.__momoqrdecoder_overlay) return; // 已有遮罩，避免重复注入
 
+  // 本地化辅助（content script 可直接使用 chrome.i18n）
+  function t(key, subs) { return chrome.i18n.getMessage(key, subs) || key; }
+
   const overlay = document.createElement('div'); // 视觉暗化遮罩：不拦截任何鼠标事件
   overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:999999;background:rgba(0,0,0,0.08);pointer-events:none;';
   overlay.id = '__momoqrdecoder_overlay';
 
   const tip = document.createElement('div');
   tip.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:1000002;background:rgba(33,150,243,0.95);color:#fff;padding:8px 16px;border-radius:6px;font:14px/1.4 system-ui,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,0.25);pointer-events:none;white-space:nowrap;';
-  tip.textContent = '正在获取画面…';
+  tip.textContent = t('fetchingView');
 
   // 冻结画面：全屏覆盖视口。img 不拦截事件（事件由 document 捕获阶段处理）
   const shot = document.createElement('img');
@@ -126,11 +129,11 @@
     if (!msg || typeof msg !== 'object') return;
     if (typeof msg.__momoqrdecoder_select_screenshot === 'string' && msg.__momoqrdecoder_select_screenshot) {
       shot.src = msg.__momoqrdecoder_select_screenshot;
-      tip.textContent = '按住左键拖动框选二维码区域 · Esc 取消';
+      tip.textContent = t('dragSelect');
       return;
     }
     if (msg.__momoqrdecoder_select_screenshot === null || msg.__momoqrdecoder_select_screenshot_error) {
-      tip.textContent = msg.__momoqrdecoder_select_screenshot_error || '截图失败，已退出框选';
+      tip.textContent = msg.__momoqrdecoder_select_screenshot_error || t('screenshotFailedQuit');
       setTimeout(cleanup, 1800);
     }
   }
@@ -140,7 +143,7 @@
     try {
       chrome.runtime.sendMessage({action: 'qr_capture_for_select'});
     } catch (err) {
-      tip.textContent = '扩展通信失败，已退出框选';
+      tip.textContent = t('commFailed');
       setTimeout(cleanup, 1500);
     }
   }

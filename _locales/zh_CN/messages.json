@@ -1,0 +1,68 @@
+{
+  "extName": { "message": "默默二维码解码器" },
+  "extDesc": { "message": "自动扫描当前网页二维码并解码，支持延迟扫描、复制和新标签页打开。" },
+  "extTitle": { "message": "默默二维码解码器" },
+
+  "scanNow": { "message": "立即扫描" },
+  "delayScan": { "message": "延迟扫描" },
+  "regionShot": { "message": "区域截图" },
+  "uploadImage": { "message": "手动上传" },
+  "scanning": { "message": "正在扫描二维码..." },
+
+  "copyContent": { "message": "复制内容" },
+  "copyAll": { "message": "一键复制" },
+  "copied": { "message": "已复制!" },
+  "copyFailed": { "message": "复制失败" },
+  "openNewTab": { "message": "新标签页打开" },
+  "openNewTabFailed": { "message": "新标签页打开失败: $1" },
+
+  "multiSame": { "message": "检测到多个二维码，内容均相同：" },
+  "multiList": { "message": "检测到多个二维码，内容如下：" },
+  "qrN": { "message": "二维码$1：" },
+  "backendNoResponse": { "message": "插件后台无响应" },
+  "secondsLeft": { "message": "$1 秒" },
+  "regionSecondsLeft": { "message": "$1 秒后可框选区域" },
+
+  "readClipboard": { "message": "读取剪贴板" },
+  "clipboardReadFail": { "message": "读取剪贴板图片失败" },
+  "clipboardNoImage": { "message": "剪贴板中没有图片" },
+  "clipboardUnsupported": { "message": "当前浏览器不支持图片剪贴板读取" },
+  "clipboardFail": { "message": "读取剪贴板失败: $1" },
+  "uploadFile": { "message": "上传文件" },
+  "fileReadFail": { "message": "读取文件失败" },
+
+  "noActiveTab": { "message": "未找到活动标签页" },
+  "injectFail": { "message": "注入脚本失败: $1" },
+  "dragHint": { "message": "请在网页上拖动框选区域" },
+
+  "qrScanFailed": { "message": "二维码识别失败" },
+  "multiDetected": { "message": "识别到多个二维码" },
+  "qrContent": { "message": "二维码内容" },
+
+  "fetchingView": { "message": "正在获取画面…" },
+  "dragSelect": { "message": "按住左键拖动框选二维码区域 · Esc 取消" },
+  "screenshotFailedQuit": { "message": "截图失败，已退出框选" },
+  "commFailed": { "message": "扩展通信失败，已退出框选" },
+
+  "regionShotFail": { "message": "无法在当前页面进行区域截图：$1" },
+  "screenshotFailedPage": { "message": "截图失败，无法获取页面内容。" },
+  "screenshotFail": { "message": "截图失败: $1" },
+  "unknownError": { "message": "未知错误" },
+  "noImageData": { "message": "未收到图片数据" },
+
+  "offscreenUnsupported": { "message": "当前浏览器不支持 offscreen API" },
+  "wechatEngineUnavailable": { "message": "微信引擎不可用: $1" },
+  "wechatEngineNoResponse": { "message": "微信引擎无响应" },
+  "wechatEngineStartFailed": { "message": "微信引擎启动失败: $1" },
+  "wechatDecodeFailed": { "message": "微信引擎解码失败: $1" },
+  "engineNoResponse": { "message": "引擎无响应" },
+  "noQrDetected": { "message": "未检测到二维码" },
+  "imageLoadFailed": { "message": "图片加载失败" },
+
+  "offscreenJustification": { "message": "使用微信 QR 引擎解码美化二维码" },
+
+  "modelReadFail": { "message": "模型读取失败" },
+  "modelLoadFail": { "message": "模型加载失败: $1" },
+  "wechatInitFailed": { "message": "微信引擎初始化失败: $1" },
+  "wechatTimeout": { "message": "微信引擎响应超时" }
+}

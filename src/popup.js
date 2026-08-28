@@ -1,6 +1,15 @@
 // popup.js —— 弹窗逻辑：下发扫描指令、展示识别结果
 // 所有解码均由 background 统一完成，popup 只负责指令与展示
 
+// 本地化辅助：取翻译文本，缺失时回退 key（键存在才替换，避免误清空元素）
+function t(key, subs) { return chrome.i18n.getMessage(key, subs) || key; }
+
+// 渲染 HTML 中带 data-i18n 的元素文本（按钮、提示等）
+document.querySelectorAll('[data-i18n]').forEach(el => {
+  const msg = chrome.i18n.getMessage(el.dataset.i18n);
+  if (msg) el.textContent = msg;
+});
+
 const scanBtn = document.getElementById('scanBtn');
 const delayBtn = document.getElementById('delayBtn');
 const regionBtn = document.getElementById('regionBtn');
@@ -36,15 +45,15 @@ function showError(msg) {
   const btnGroup = document.createElement('div');
   btnGroup.style.cssText = 'text-align:center;margin-top:8px;';
   const btnCopy = document.createElement('button');
-  btnCopy.textContent = '复制内容';
+  btnCopy.textContent = t('copyContent');
   btnCopy.className = 'btn blue';
   btnCopy.onclick = () => {
     navigator.clipboard.writeText(msg).then(() => {
-      btnCopy.textContent = '已复制!';
-      setTimeout(() => { btnCopy.textContent = '复制内容'; }, 1200);
+      btnCopy.textContent = t('copied');
+      setTimeout(() => { btnCopy.textContent = t('copyContent'); }, 1200);
     }).catch(() => {
-      btnCopy.textContent = '复制失败';
-      setTimeout(() => { btnCopy.textContent = '复制内容'; }, 1200);
+      btnCopy.textContent = t('copyFailed');
+      setTimeout(() => { btnCopy.textContent = t('copyContent'); }, 1200);
     });
   };
   btnGroup.appendChild(btnCopy);
@@ -71,22 +80,22 @@ function appendResult(target, text) {
   btnGroup.style.cssText = 'text-align:center;margin-top:10px;';
 
   const btnCopy = document.createElement('button');
-  btnCopy.textContent = '一键复制';
+  btnCopy.textContent = t('copyAll');
   btnCopy.className = 'btn blue';
   btnCopy.onclick = () => {
     navigator.clipboard.writeText(text).then(() => {
-      btnCopy.textContent = '已复制!';
-      setTimeout(() => { btnCopy.textContent = '一键复制'; }, 1200);
+      btnCopy.textContent = t('copied');
+      setTimeout(() => { btnCopy.textContent = t('copyAll'); }, 1200);
     }).catch(() => {
-      btnCopy.textContent = '复制失败';
-      setTimeout(() => { btnCopy.textContent = '一键复制'; }, 1200);
+      btnCopy.textContent = t('copyFailed');
+      setTimeout(() => { btnCopy.textContent = t('copyAll'); }, 1200);
     });
   };
   btnGroup.appendChild(btnCopy);
 
   if (URL_PATTERN.test(text)) {
     const btnOpen = document.createElement('button');
-    btnOpen.textContent = '新标签页打开';
+    btnOpen.textContent = t('openNewTab');
     btnOpen.className = 'btn blue';
     btnOpen.onclick = () => {
       let url = text;
@@ -96,7 +105,7 @@ function appendResult(target, text) {
       // Promise rejection 污染插件错误日志。
       chrome.tabs.create({url: url}, () => {
         if (chrome.runtime.lastError) {
-          showError('新标签页打开失败: ' + chrome.runtime.lastError.message);
+          showError(t('openNewTabFailed', [chrome.runtime.lastError.message]));
         }
       });
     };
@@ -122,20 +131,20 @@ function showResult(text, notice) {
 function showMultiResult(arr) {
   const uniq = Array.from(new Set(arr));
   if (uniq.length === 1) {
-    showResult(uniq[0], arr.length > 1 ? '检测到多个二维码，内容均相同：' : null);
+    showResult(uniq[0], arr.length > 1 ? t('multiSame') : null);
     return;
   }
   resultDiv.innerHTML = '';
   const head = document.createElement('div');
   head.style.cssText = 'color:#888;font-size:13px;margin-bottom:8px;';
-  head.textContent = '检测到多个二维码，内容如下：';
+  head.textContent = t('multiList');
   resultDiv.appendChild(head);
   uniq.forEach((text, idx) => {
     const box = document.createElement('div');
     box.style.cssText = 'margin-bottom:10px;padding:7px 8px;background:#f8f8fa;border-radius:4px;';
     const label = document.createElement('div');
     label.style.cssText = 'font-size:13px;color:#333;margin-bottom:4px;';
-    label.textContent = '二维码' + (idx + 1) + '：';
+    label.textContent = t('qrN', [idx + 1]);
     box.appendChild(label);
     appendResult(box, text);
     resultDiv.appendChild(box);
@@ -146,7 +155,7 @@ function showMultiResult(arr) {
 // 统一处理后台返回的识别结果
 function handleDecodeResult(result) {
   showLoading(false);
-  if (!result) { showError('插件后台无响应'); return; }
+  if (!result) { showError(t('backendNoResponse')); return; }
   if (result.error) { showError(result.error); }
   else if (result.multi) { showMultiResult(result.multi); }
   else { showResult(result.data); }
@@ -160,7 +169,7 @@ function doScan(delay) {
   showLoading(false);
   if (delay > 0) {
     let sec = delay;
-    countdown.textContent = sec + ' 秒';
+    countdown.textContent = t('secondsLeft', [sec]);
     countdown.style.display = 'block';
     countdownTimer = setInterval(() => {
       sec--;
@@ -170,7 +179,7 @@ function doScan(delay) {
         countdown.style.display = 'none';
         realScan();
       } else {
-        countdown.textContent = sec + ' 秒';
+        countdown.textContent = t('secondsLeft', [sec]);
       }
     }, 1000);
   } else {
@@ -201,7 +210,7 @@ function showUploadBtns() {
 
   // 读取剪贴板
   const btnClipboard = document.createElement('button');
-  btnClipboard.textContent = '读取剪贴板';
+  btnClipboard.textContent = t('readClipboard');
   btnClipboard.className = 'btn blue';
   btnClipboard.style.marginRight = '12px';
   btnClipboard.onclick = async () => {
@@ -215,18 +224,18 @@ function showUploadBtns() {
               const blob = await item.getType(type);
               const reader = new FileReader();
               reader.onload = e => decodeImage(e.target.result);
-              reader.onerror = () => showError('读取剪贴板图片失败');
+              reader.onerror = () => showError(t('clipboardReadFail'));
               reader.readAsDataURL(blob);
               return;
             }
           }
         }
-        showError('剪贴板中没有图片');
+        showError(t('clipboardNoImage'));
       } else {
-        showError('当前浏览器不支持图片剪贴板读取');
+        showError(t('clipboardUnsupported'));
       }
     } catch (e) {
-      showError('读取剪贴板失败: ' + e.message);
+      showError(t('clipboardFail', [e.message]));
     } finally {
       btnClipboard.disabled = false;
     }
@@ -235,7 +244,7 @@ function showUploadBtns() {
 
   // 上传文件
   const btnFile = document.createElement('button');
-  btnFile.textContent = '上传文件';
+  btnFile.textContent = t('uploadFile');
   btnFile.className = 'btn blue';
   btnFile.onclick = () => {
     const input = document.createElement('input');
@@ -245,7 +254,7 @@ function showUploadBtns() {
       if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = e => decodeImage(e.target.result);
-        reader.onerror = () => showError('读取文件失败');
+        reader.onerror = () => showError(t('fileReadFail'));
         reader.readAsDataURL(input.files[0]);
       }
     };
@@ -271,7 +280,7 @@ function regionScanDelay(delay) {
   hideError();
   showLoading(false);
   let sec = delay;
-  countdown.textContent = sec + ' 秒后可框选区域';
+  countdown.textContent = t('regionSecondsLeft', [sec]);
   countdown.style.display = 'block';
   regionTimer = setInterval(() => {
     sec--;
@@ -281,7 +290,7 @@ function regionScanDelay(delay) {
       countdown.style.display = 'none';
       startRegionSelect();
     } else {
-      countdown.textContent = sec + ' 秒后可框选区域';
+      countdown.textContent = t('regionSecondsLeft', [sec]);
     }
   }, 1000);
 }
@@ -289,15 +298,15 @@ function regionScanDelay(delay) {
 function startRegionSelect() {
   chrome.tabs.query({active: true, currentWindow: true}, tabs => {
     const tab = tabs && tabs[0];
-    if (!tab || typeof tab.id !== 'number') { showError('未找到活动标签页'); return; }
+    if (!tab || typeof tab.id !== 'number') { showError(t('noActiveTab')); return; }
     chrome.runtime.sendMessage({action: 'injectRegionScript', tabId: tab.id}, resp => {
       if (chrome.runtime.lastError) {
-        showError('注入脚本失败: ' + chrome.runtime.lastError.message);
+        showError(t('injectFail', [chrome.runtime.lastError.message]));
         return;
       }
-      if (!resp) { showError('插件后台无响应'); return; }
+      if (!resp) { showError(t('backendNoResponse')); return; }
       if (resp.error) { showError(resp.error); return; }
-      countdown.textContent = '请在网页上拖动框选区域';
+      countdown.textContent = t('dragHint');
       countdown.style.display = 'block';
     });
   });
@@ -311,8 +320,8 @@ uploadBtn.onclick = showUploadBtns;
 
 // ---------- 扩展名与版本号（从 manifest 动态读取） ----------
 const manifest = chrome.runtime.getManifest();
-// 左上角标题：显示中文名（与扩展管理中的名称一致）
+// 左上角标题：getManifest 返回的 name 已是按浏览器语言本地化后的值
 const extNameEl = document.getElementById('extName');
-if (extNameEl) extNameEl.textContent = manifest.name || '默默二维码解码器';
+if (extNameEl) extNameEl.textContent = manifest.name || 'momoQRdecoder';
 // 右上角版本号标签（英文名已移至底部页脚）
 document.getElementById('version').textContent = 'v' + (manifest.version || '');
