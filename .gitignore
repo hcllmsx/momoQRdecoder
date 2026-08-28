@@ -5,3 +5,4 @@ node_modules/
 *.pem
 build.cmd
 build.ps1
+STORE_LISTING.md
