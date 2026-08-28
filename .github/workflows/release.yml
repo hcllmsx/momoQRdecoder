@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      edge_publish:
+        description: '上传 zip 后是否立即提交发布到 Edge 商店（true=发布，false=仅上传草稿）'
+        required: false
+        default: 'true'
+        type: string
 
 permissions:
   contents: write
@@ -12,9 +18,15 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Edge Add-ons 发布开关与 API 凭据（来自仓库 Secrets，未配置则相关步骤自动跳过）
+    env:
+      EDGE_AUTO_PUBLISH: ${{ inputs.edge_publish || 'true' }}
+      EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+      EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+      EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # 版本号唯一来源是 VERSION 文件（与 README「开发者说明」一致）
       - name: Read version from VERSION
@@ -81,6 +93,8 @@ jobs:
             ## momoQRdecoder v${{ steps.version.outputs.version }}
 
             ### 安装
+            > **Edge 用户**：插件已提交 Edge 扩展商店审核，审核通过后可直接在商店安装；以下手动安装方式适用于 **Chrome** 及其他 Chromium 浏览器。
+
             1. 下载 `momoQRdecoder-v${{ steps.version.outputs.version }}.zip`
             2. 解压后，在浏览器扩展管理页开启「开发者模式」
             3. 点击「加载已解压的扩展程序」，选择解压出的文件夹
@@ -95,3 +109,94 @@ jobs:
             dist/*.zip
             dist/SHA256SUMS.txt
           generate_release_notes: true
+
+      # ============ 自动发布到 Microsoft Edge Add-ons（可选） ============
+      # 前提：Partner Center -> Publish API 启用并创建 API 凭据（新版 v1.1：Client ID + API Key）
+      # 需要配置仓库 Secrets：EDGE_CLIENT_ID、EDGE_API_KEY、EDGE_PRODUCT_ID（Product ID 为扩展 GUID）
+      # 未配置任一 Secret 时，本组步骤自动跳过，不影响 GitHub Release 发布
+
+      - name: Upload zip to Edge Add-ons
+        if: env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' && env.EDGE_PRODUCT_ID != ''
+        run: |
+          set -euo pipefail
+          ZIP="dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip"
+          URL="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}/submissions/draft/package"
+          HTTP_CODE=$(curl -sS -D edge_upload_headers.txt -o edge_upload_body.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: ApiKey ${EDGE_API_KEY}" \
+            -H "X-ClientID: ${EDGE_CLIENT_ID}" \
+            -H "Content-Type: application/zip" \
+            --data-binary "@${ZIP}" \
+            "${URL}")
+          echo "Edge 上传 HTTP: ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "202" ]; then
+            echo "::error::Edge 上传失败 (HTTP ${HTTP_CODE})"
+            cat edge_upload_body.json
+            exit 1
+          fi
+          OPERATION_ID=$(grep -i '^Location:' edge_upload_headers.txt | tr -d '\r' | awk '{print $2}' | awk -F'/' '{print $NF}')
+          echo "Edge 上传操作 ID: ${OPERATION_ID}"
+          echo "EDGE_UPLOAD_OP=${OPERATION_ID}" >> "${GITHUB_ENV}"
+
+      - name: Wait for Edge upload to finish
+        if: env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' && env.EDGE_PRODUCT_ID != ''
+        run: |
+          set -euo pipefail
+          URL="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}/submissions/draft/package/operations/${EDGE_UPLOAD_OP}"
+          for i in $(seq 1 60); do
+            RESP=$(curl -sS \
+              -H "Authorization: ApiKey ${EDGE_API_KEY}" \
+              -H "X-ClientID: ${EDGE_CLIENT_ID}" \
+              "${URL}")
+            STATUS=$(printf '%s' "${RESP}" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("status", ""))')
+            echo "上传状态 #${i}: ${STATUS}"
+            case "${STATUS}" in
+              Succeeded) echo "Edge 上传完成"; exit 0 ;;
+              Failed)    echo "::error::Edge 上传失败: ${RESP}"; exit 1 ;;
+              *)         sleep 10 ;;
+            esac
+          done
+          echo "::error::等待 Edge 上传超时（约 10 分钟）"; exit 1
+
+      - name: Publish to Edge Add-ons
+        if: env.EDGE_AUTO_PUBLISH == 'true' && env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' && env.EDGE_PRODUCT_ID != ''
+        run: |
+          set -euo pipefail
+          NOTES="momoQRdecoder v${{ steps.version.outputs.version }} 自动发布（GitHub Actions）"
+          URL="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}/submissions"
+          HTTP_CODE=$(curl -sS -D edge_pub_headers.txt -o edge_pub_body.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: ApiKey ${EDGE_API_KEY}" \
+            -H "X-ClientID: ${EDGE_CLIENT_ID}" \
+            -H "Content-Type: application/json" \
+            -d "{\"notes\": \"${NOTES}\"}" \
+            "${URL}")
+          echo "Edge 发布提交 HTTP: ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "202" ]; then
+            echo "::error::Edge 发布提交失败 (HTTP ${HTTP_CODE})"
+            cat edge_pub_body.json
+            exit 1
+          fi
+          OPERATION_ID=$(grep -i '^Location:' edge_pub_headers.txt | tr -d '\r' | awk '{print $2}' | awk -F'/' '{print $NF}')
+          echo "Edge 发布操作 ID: ${OPERATION_ID}"
+          echo "EDGE_PUBLISH_OP=${OPERATION_ID}" >> "${GITHUB_ENV}"
+
+      - name: Wait for Edge publish status
+        if: env.EDGE_AUTO_PUBLISH == 'true' && env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' && env.EDGE_PRODUCT_ID != ''
+        run: |
+          set -euo pipefail
+          URL="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}/submissions/operations/${EDGE_PUBLISH_OP}"
+          for i in $(seq 1 60); do
+            RESP=$(curl -sS \
+              -H "Authorization: ApiKey ${EDGE_API_KEY}" \
+              -H "X-ClientID: ${EDGE_CLIENT_ID}" \
+              "${URL}")
+            STATUS=$(printf '%s' "${RESP}" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("status", ""))')
+            echo "发布状态 #${i}: ${STATUS}"
+            case "${STATUS}" in
+              Succeeded) echo "Edge 已提交发布，等待商店审核"; exit 0 ;;
+              Failed)    echo "::error::Edge 发布失败: ${RESP}"; exit 1 ;;
+              *)         sleep 10 ;;
+            esac
+          done
+          echo "::warning::Edge 发布状态轮询超时（仍在处理中），请到 Partner Center 查看进度"
