@@ -10,7 +10,9 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3）。
 > - **Chrome 用户**：Chrome 商店暂未上架，请前往 [Releases](https://github.com/hcllmsx/momoQRdecoder/releases) 下载 zip 压缩包，按下方「使用」说明手动安装。
 
 > [!IMPORTANT]
-> 本扩展最初名为 **QRdecoder**（仓库：https://github.com/hcllmsx/qrdecoder ），现更名为 **momoQRdecoder · 默默二维码解码器**，仓库迁移至 https://github.com/hcllmsx/momoQRdecoder 。
+> -本扩展最初名为 **QRdecoder**（原仓库：hcllmsx/qrdecoder ）
+> 
+> -现更名为 **momoQRdecoder · 默默二维码解码器**，仓库链接也变更为 [hcllmsx/momoQRdecoder](https://github.com/hcllmsx/momoQRdecoder) 
 
 ## 功能
 
