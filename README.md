@@ -37,3 +37,9 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3）。
 - [jsQR](https://github.com/cozmo/jsQR) — 标准二维码识别库
 - [OpenCV.js](https://opencv.org/) — 图像处理与 WASM 运行环境
 - [WeChatQRCode](https://github.com/opencv/opencv_contrib/tree/master/modules/wechat_qrcode)（OpenCV contrib）— 美化/艺术二维码识别引擎
+
+## 许可证
+
+Copyright (C) 2025 hcllmsx
+
+本项目以 [GNU General Public License v3.0](LICENSE) 发布（GPL-3.0）。您可以自由使用、修改和分发本项目，但任何基于本项目的衍生作品也**必须**以 GPL-3.0 许可开源，并保留上述版权声明。
