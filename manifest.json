@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "默默二维码解码器",
-  "version": "26.8.28.10",
+  "version": "26.8.28.12",
   "description": "自动扫描当前网页二维码并解码，支持延迟扫描、复制和新标签页打开。",
   "homepage_url": "https://github.com/hcllmsx/momoQRdecoder",
   "minimum_chrome_version": "109",

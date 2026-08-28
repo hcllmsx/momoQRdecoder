@@ -79,9 +79,6 @@ window.addEventListener('message', (e) => {
   if (msg.type === 'hello') {
     // 沙箱脚本已运行，注入模型数据
     sendModelsToSandbox();
-  } else if (msg.type === 'sandboxInfo') {
-    // 沙箱自检(调试用)：确认 sandbox.html 是否真的以沙箱身份运行
-    console.warn('[momoQRdecoder] 沙箱自检:', msg.sandboxed ? '沙箱生效(unsafe-eval 已放开)' : '沙箱未生效!', 'origin=' + msg.origin, 'hasChrome=' + msg.hasChrome);
   } else if (msg.type === 'sandboxReady') {
     sandboxReady = true;
     while (pendingRequests.length) postToSandbox(pendingRequests.shift());

@@ -1,5 +1,6 @@
 // popup.js —— 弹窗逻辑：下发扫描指令、展示识别结果
 // 所有解码均由 background 统一完成，popup 只负责指令与展示
+
 const scanBtn = document.getElementById('scanBtn');
 const delayBtn = document.getElementById('delayBtn');
 const regionBtn = document.getElementById('regionBtn');
@@ -90,7 +91,14 @@ function appendResult(target, text) {
     btnOpen.onclick = () => {
       let url = text;
       if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
-      chrome.tabs.create({url: url});
+      // 使用回调形式：部分浏览器(如夸克)的 tabs.create 在返回 Promise
+      // 时可能因内部读取 undefined 报错，回调形式可避免未处理的
+      // Promise rejection 污染插件错误日志。
+      chrome.tabs.create({url: url}, () => {
+        if (chrome.runtime.lastError) {
+          showError('新标签页打开失败: ' + chrome.runtime.lastError.message);
+        }
+      });
     };
     btnGroup.appendChild(btnOpen);
   }
@@ -280,8 +288,9 @@ function regionScanDelay(delay) {
 
 function startRegionSelect() {
   chrome.tabs.query({active: true, currentWindow: true}, tabs => {
-    if (!tabs || !tabs.length) { showError('未找到活动标签页'); return; }
-    chrome.runtime.sendMessage({action: 'injectRegionScript', tabId: tabs[0].id}, resp => {
+    const tab = tabs && tabs[0];
+    if (!tab || typeof tab.id !== 'number') { showError('未找到活动标签页'); return; }
+    chrome.runtime.sendMessage({action: 'injectRegionScript', tabId: tab.id}, resp => {
       if (chrome.runtime.lastError) {
         showError('注入脚本失败: ' + chrome.runtime.lastError.message);
         return;

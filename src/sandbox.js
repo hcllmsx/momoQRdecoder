@@ -99,15 +99,3 @@ function dataUrlToImageData(dataUrl) {
 
 // 沙箱脚本已运行，向 offscreen 请求模型注入
 window.parent.postMessage({ type: 'hello' }, '*');
-
-// 沙箱自检：确认本页确实以沙箱身份运行(origin 为 null 且无 chrome.* API)。
-// 若 manifest 的 sandbox.pages 未生效，本页仍会作为普通扩展页面运行，
-// 此时 OpencvQr.js 的 unsafe-eval 会被 extension_pages 的 CSP 拦截。
-try {
-  window.parent.postMessage({
-    type: 'sandboxInfo',
-    sandboxed: typeof chrome === 'undefined' && String(location.origin) === 'null',
-    origin: String(location.origin),
-    hasChrome: typeof chrome !== 'undefined'
-  }, '*');
-} catch (e) { /* 忽略上报失败 */ }
