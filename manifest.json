@@ -7,10 +7,10 @@
   "homepage_url": "https://github.com/hcllmsx/momoQRdecoder",
   "minimum_chrome_version": "109",
   "icons": {
-    "16": "src/momoqrdecoder-icon.png",
-    "32": "src/momoqrdecoder-icon.png",
-    "48": "src/momoqrdecoder-icon.png",
-    "128": "src/momoqrdecoder-icon.png"
+    "16": "src/momoqr-logo-300px.png",
+    "32": "src/momoqr-logo-300px.png",
+    "48": "src/momoqr-logo-300px.png",
+    "128": "src/momoqr-logo-300px.png"
   },
   "permissions": [
     "activeTab",
@@ -32,6 +32,6 @@
   "action": {
     "default_popup": "src/popup.html",
     "default_title": "__MSG_extTitle__",
-    "default_icon": "src/momoqrdecoder-icon.png"
+    "default_icon": "src/momoqr-logo-300px.png"
   }
 }

@@ -1,7 +1,7 @@
 {
-  "extName": { "message": "Momo QR Decoder" },
+  "extName": { "message": "MoMo QR Decoder" },
   "extDesc": { "message": "Automatically scans and decodes QR codes on the current webpage. Supports delayed scanning, copying, and opening in a new tab." },
-  "extTitle": { "message": "Momo QR Decoder" },
+  "extTitle": { "message": "MoMo QR Decoder" },
 
   "scanNow": { "message": "Scan Now" },
   "delayScan": { "message": "Delay Scan" },
