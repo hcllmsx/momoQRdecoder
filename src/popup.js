@@ -25,7 +25,29 @@ function showLoading(show) {
 }
 
 function showError(msg) {
-  errorDiv.textContent = msg;
+  errorDiv.innerHTML = '';
+  // textContent 渲染，防注入
+  const textEl = document.createElement('div');
+  textEl.textContent = msg;
+  errorDiv.appendChild(textEl);
+
+  // 复制按钮（与区域截图悬浮通知保持一致）
+  const btnGroup = document.createElement('div');
+  btnGroup.style.cssText = 'text-align:center;margin-top:8px;';
+  const btnCopy = document.createElement('button');
+  btnCopy.textContent = '复制内容';
+  btnCopy.className = 'btn blue';
+  btnCopy.onclick = () => {
+    navigator.clipboard.writeText(msg).then(() => {
+      btnCopy.textContent = '已复制!';
+      setTimeout(() => { btnCopy.textContent = '复制内容'; }, 1200);
+    }).catch(() => {
+      btnCopy.textContent = '复制失败';
+      setTimeout(() => { btnCopy.textContent = '复制内容'; }, 1200);
+    });
+  };
+  btnGroup.appendChild(btnCopy);
+  errorDiv.appendChild(btnGroup);
   errorDiv.style.display = 'block';
 }
 
@@ -278,6 +300,10 @@ delayBtn.onclick = () => doScan(3);
 regionBtn.onclick = () => regionScanDelay(3);
 uploadBtn.onclick = showUploadBtns;
 
-// ---------- 版本号（从 manifest 动态读取） ----------
+// ---------- 扩展名与版本号（从 manifest 动态读取） ----------
 const manifest = chrome.runtime.getManifest();
+// 左上角标题：显示中文名（与扩展管理中的名称一致）
+const extNameEl = document.getElementById('extName');
+if (extNameEl) extNameEl.textContent = manifest.name || '默默二维码解码器';
+// 右上角版本号标签（英文名已移至底部页脚）
 document.getElementById('version').textContent = 'v' + (manifest.version || '');

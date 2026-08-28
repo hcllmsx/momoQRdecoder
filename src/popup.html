@@ -59,23 +59,54 @@
       color: #888;
       font-size: 14px;
       text-align: center;
+      padding: 10px 0;
+    }
+    #loading .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #d8d8d8;
+      border-top-color: #43b047;
+      border-radius: 50%;
+      vertical-align: -3px;
+      margin-right: 8px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
     #error {
       color: #e53935;
       font-size: 14px;
       text-align: center;
     }
-    #version {
+    .version-badge {
+      background: #eef2f6;
+      border: 1px solid #d5dde5;
+      color: #607080;
+      border-radius: 10px;
+      padding: 2px 9px;
+      font-size: 11px;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .footer {
       text-align: center;
       color: #aaa;
       font-size: 11px;
       margin-top: 14px;
       user-select: none;
     }
+    .footer a {
+      color: #888;
+    }
   </style>
 </head>
 <body>
-  <h2 style="margin-top:0;margin-bottom:12px;font-size:20px;">momoQRdecoder</h2>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <h2 id="extName" style="margin:0; font-size:20px;">默默二维码解码器</h2>
+    <span id="version" class="version-badge"></span>
+  </div>
   <div class="btn-group" style="text-align:center; margin-bottom: 2px;">
     <button class="btn" id="scanBtn">立即扫描</button>
     <button class="btn" id="delayBtn">延迟扫描</button>
@@ -85,10 +116,12 @@
     <button class="btn" id="uploadBtn">手动上传</button>
   </div>
   <div id="countdown" style="display:none;"></div>
-  <div id="loading" style="display:none;">正在扫描二维码...</div>
+  <div id="loading" style="display:none;"><span class="spinner"></span>正在扫描二维码...</div>
   <div id="result" style="display:none;"></div>
   <div id="error" style="display:none;"></div>
-  <div id="version"></div>
+  <footer class="footer">
+    momoQRdecoder · by <a href="https://space.bilibili.com/255947051" target="_blank" rel="noopener noreferrer">火车啦啦</a>
+  </footer>
   <script src="popup.js"></script>
 </body>
 </html>
