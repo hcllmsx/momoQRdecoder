@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # 版本号唯一来源是 VERSION 文件（与 README「开发者说明」一致）
+      - name: Read version from VERSION
+        id: version
+        run: |
+          VER="$(tr -d '[:space:]' < VERSION)"
+          echo "version=${VER}" >> "${GITHUB_OUTPUT}"
+          echo "读取到版本号: ${VER}"
+
+      # 由 tag 触发时，校验 tag 与 VERSION 一致，避免版本漂移
+      - name: Verify tag matches VERSION
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VER="${{ steps.version.outputs.version }}"
+          if [ "${TAG}" != "${VER}" ]; then
+            echo "::error::Tag '${GITHUB_REF_NAME}' 与 VERSION(${VER}) 不一致，请打 tag: v${VER}"
+            exit 1
+          fi
+          echo "tag 校验通过: ${GITHUB_REF_NAME}"
+
+      # 将 VERSION 同步进 manifest.json，保证发布包内版本号一致
+      - name: Sync version into manifest.json
+        run: |
+          VER="${{ steps.version.outputs.version }}"
+          python3 -c "
+          import json, sys
+          path = 'manifest.json'
+          with open(path, encoding='utf-8') as f:
+              data = json.load(f)
+          data['version'] = sys.argv[1]
+          with open(path, 'w', encoding='utf-8') as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write('\n')
+          " "${VER}"
+          echo "manifest.json version -> ${VER}"
+
+      # 打包 Chrome 扩展：manifest.json + src/（含 models 与 icon）
+      - name: Build extension zip
+        run: |
+          mkdir -p dist
+          cd dist
+          zip -r "momoQRdecoder-${{ steps.version.outputs.version }}.zip" ../manifest.json ../src
+          cd ..
+          ls -lh dist/
+
+      # 生成 SHA256 校验文件（发布后可用 sha256sum -c 验证下载包完整性）
+      - name: Generate SHA256 checksums
+        run: |
+          cd dist
+          sha256sum *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          echo "SHA=$(cat SHA256SUMS.txt)" >> "${GITHUB_ENV}"
+          cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: momoQRdecoder v${{ steps.version.outputs.version }}
+          body: |
+            ## momoQRdecoder v${{ steps.version.outputs.version }}
+
+            ### 安装
+            1. 下载 `momoQRdecoder-${{ steps.version.outputs.version }}.zip`
+            2. 解压后，在浏览器扩展管理页开启「开发者模式」
+            3. 点击「加载已解压的扩展程序」，选择解压出的文件夹
+
+            ### 校验（SHA256）
+            ```
+            ${{ env.SHA }}
+            ```
+
+            > 校验方法：`sha256sum -c SHA256SUMS.txt`（Linux/macOS）或 `Get-FileHash`（Windows）
+          files: |
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          generate_release_notes: true
