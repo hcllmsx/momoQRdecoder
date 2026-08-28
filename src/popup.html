@@ -65,6 +65,13 @@
       font-size: 14px;
       text-align: center;
     }
+    #version {
+      text-align: center;
+      color: #aaa;
+      font-size: 11px;
+      margin-top: 14px;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -81,7 +88,7 @@
   <div id="loading" style="display:none;">正在扫描二维码...</div>
   <div id="result" style="display:none;"></div>
   <div id="error" style="display:none;"></div>
-  <script src="jsQR.js"></script>
+  <div id="version"></div>
   <script src="popup.js"></script>
 </body>
 </html>

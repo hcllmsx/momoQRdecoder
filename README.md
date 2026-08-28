@@ -7,6 +7,7 @@ momoQRdecoder 是一款专为 Chrome/Edge 浏览器开发的二维码自动识�
 - **立即扫描**：一键截图并识别当前网页可见区域的二维码。
 - **延迟扫描**：固定3秒延迟，适合识别鼠标悬停后才出现的二维码。
 - **区域截图**：可手动框选任意区域进行二维码识别，结果以网页右上角悬浮通知展示。
+- **美化二维码识别**：内置双引擎，jsQR 无法识别小红书/微信等「艺术化/美化二维码」（圆点、心形模块）时，自动回退到微信 WeChatQRCode 引擎识别。
 - **多二维码识别**：同屏多个二维码时，会分别展示所有内容，并提示是否有重复内容。
 - **内容操作**：识别结果支持一键复制、直接在新标签页打开网址。
 - **友好界面**：简洁直观的弹窗UI，支持中文提示。
@@ -23,6 +24,8 @@ momoQRdecoder 是一款专为 Chrome/Edge 浏览器开发的二维码自动识�
   - 请使用“延迟扫描”功能，并确保倒计时期间二维码已完全显示。
 - **区域截图识别不准？**
   - 请确保框选区域完整覆盖二维码，且页面未被遮挡、未被其他弹窗挡住。
+- **美化二维码识别失败？**
+  - 微信引擎首启需加载约 5MB WASM 与模型，首次识别稍慢属正常现象；若浏览器不支持 offscreen API（Chrome 109 以下），则自动降级为仅 jsQR 识别。
 - **多二维码内容重复？**
   - 扩展会自动提示“检测到多个二维码，内容均相同”。
 - **识别失败？**
@@ -30,21 +33,28 @@ momoQRdecoder 是一款专为 Chrome/Edge 浏览器开发的二维码自动识�
 
 ## 技术栈
 - JavaScript (ES6)
-- jsQR (二维码识别库)
-- Chrome/Edge 扩展 API
+- jsQR (标准二维码识别库)
+- OpenCV.js + 微信 WeChatQRCode (美化二维码识别引擎，WASM)
+- Chrome/Edge 扩展 API (Manifest V3)
 
 ## 目录结构
 ```
 momoQRdecoder/
 ├── src/
 │   ├── popup.html           # 扩展弹窗页面
-│   ├── popup.js             # 弹窗逻辑与二维码识别
-│   ├── background.js        # 后台脚本，截图与消息分发
-│   ├── regionOverlay.js     # 区域截图内容脚本（页面遮罩与选区）
-│   ├── cropAndDecodeQRCode.js # 后台截图裁剪与二维码识别
-│   ├── qrNotify.js          # 识别结果网页悬浮通知脚本
-│   ├── jsQR.js              # 二维码识别库
+│   ├── popup.js             # 弹窗逻辑（指令下发与结果展示）
+│   ├── background.js        # 后台脚本，截图与消息分发（含解码回退链）
+│   ├── regionOverlay.js     # 区域截图内容脚本（页面遮罩与选区，按需注入）
+│   ├── cropAndDecodeQRCode.js # 后台二维码识别（整图/裁剪/滑窗多码）
+│   ├── qrNotify.js          # 识别结果网页悬浮通知脚本（按需注入）
+│   ├── offscreen.html       # 离屏文档（承载微信引擎，MV3 必需）
+│   ├── offscreen.js         # 离屏解码桥接（监听消息、调用微信引擎）
+│   ├── OpencvQr.js          # OpenCV.js + 微信引擎 WASM（约 4.8MB）
+│   ├── models/              # 微信引擎模型文件（detect/sr 的 caffemodel）
+│   ├── jsQR.js              # 标准二维码识别库
 │   └── momoqrdecoder-icon.png   # 图标
-├── manifest.json            # 扩展清单
+├── manifest.json            # 扩展清单（需 Chrome 109+）
+├── VERSION                  # 版本号
+├── LICENSE                  # 许可证
 └── README.md                # 使用说明
 ```

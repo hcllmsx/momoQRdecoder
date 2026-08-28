@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>momoQRdecoder sandbox</title>
+</head>
+<body>
+  <!-- 沙箱引擎页：由 offscreen document 以隐藏 iframe 方式加载。
+       本页 CSP 由 manifest 的 content_security_policy.sandbox 定义，
+       允许 unsafe-eval —— OpenCV.js 的 Embind 绑定层运行期依赖
+       new Function 动态生成胶水代码，普通扩展页面(MV3)无法满足。 -->
+  <script src="OpencvQr.js"></script>
+  <script src="sandbox.js"></script>
+</body>
+</html>

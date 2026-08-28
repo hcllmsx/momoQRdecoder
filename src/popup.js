@@ -1,75 +1,130 @@
-// popup.js
+// popup.js —— 弹窗逻辑：下发扫描指令、展示识别结果
+// 所有解码均由 background 统一完成，popup 只负责指令与展示
 const scanBtn = document.getElementById('scanBtn');
 const delayBtn = document.getElementById('delayBtn');
+const regionBtn = document.getElementById('regionBtn');
+const uploadBtn = document.getElementById('uploadBtn');
 const countdown = document.getElementById('countdown');
 const loading = document.getElementById('loading');
 const resultDiv = document.getElementById('result');
 const errorDiv = document.getElementById('error');
 
 let countdownTimer = null;
+let regionTimer = null;
+
+// 网址判定：支持省略协议、端口、路径/查询/锚点、Unicode 域名
+const URL_PATTERN = /^(https?:\/\/)?([\p{L}\p{N}-]+\.)+\p{L}{2,}(:\d+)?(\/[^\s]*)?$/iu;
+
+function clearTimers() {
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  if (regionTimer) { clearInterval(regionTimer); regionTimer = null; }
+}
 
 function showLoading(show) {
   loading.style.display = show ? 'block' : 'none';
 }
+
 function showError(msg) {
   errorDiv.textContent = msg;
   errorDiv.style.display = 'block';
 }
+
 function hideError() {
   errorDiv.style.display = 'none';
 }
-function showResult(text) {
-  // 移除旧按钮组
-  const oldGroup = document.getElementById('qr-btn-group');
-  if (oldGroup && oldGroup.parentNode) oldGroup.parentNode.removeChild(oldGroup);
+
+function hideResult() {
+  resultDiv.style.display = 'none';
   resultDiv.innerHTML = '';
-  if (!text) return;
-  // 判断是否网址
-  const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w- .\/\?%&=]*)?$/i;
-  // 内容单独div
+}
+
+// 在目标容器内渲染单条识别结果（内容 + 操作按钮）
+function appendResult(target, text) {
   const contentDiv = document.createElement('div');
-  contentDiv.textContent = text;
-  resultDiv.appendChild(contentDiv);
-  resultDiv.style.display = 'block';
-  // 创建按钮组
+  contentDiv.textContent = text; // textContent 防注入
+  target.appendChild(contentDiv);
+
   const btnGroup = document.createElement('div');
-  btnGroup.id = 'qr-btn-group';
-  btnGroup.style.textAlign = 'center';
-  btnGroup.style.marginTop = '14px';
+  btnGroup.style.cssText = 'text-align:center;margin-top:10px;';
+
   const btnCopy = document.createElement('button');
   btnCopy.textContent = '一键复制';
   btnCopy.className = 'btn blue';
   btnCopy.onclick = () => {
     navigator.clipboard.writeText(text).then(() => {
       btnCopy.textContent = '已复制!';
-      setTimeout(()=>btnCopy.textContent='一键复制', 1200);
+      setTimeout(() => { btnCopy.textContent = '一键复制'; }, 1200);
+    }).catch(() => {
+      btnCopy.textContent = '复制失败';
+      setTimeout(() => { btnCopy.textContent = '一键复制'; }, 1200);
     });
   };
   btnGroup.appendChild(btnCopy);
-  if (urlPattern.test(text)) {
+
+  if (URL_PATTERN.test(text)) {
     const btnOpen = document.createElement('button');
     btnOpen.textContent = '新标签页打开';
     btnOpen.className = 'btn blue';
     btnOpen.onclick = () => {
       let url = text;
       if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
-      window.open(url, '_blank');
+      chrome.tabs.create({url: url});
     };
     btnGroup.appendChild(btnOpen);
   }
-  // 将按钮组插入到 resultDiv 后面
-  resultDiv.parentNode && resultDiv.parentNode.insertBefore(btnGroup, resultDiv.nextSibling);
+  target.appendChild(btnGroup);
 }
 
-function hideResult() {
-  resultDiv.style.display = 'none';
-  // 移除按钮组
-  const oldGroup = document.getElementById('qr-btn-group');
-  if (oldGroup && oldGroup.parentNode) oldGroup.parentNode.removeChild(oldGroup);
-  hideUploadBtns();
+// 主结果区展示单条结果，可带灰色提示前缀
+function showResult(text, notice) {
+  resultDiv.innerHTML = '';
+  if (notice) {
+    const head = document.createElement('div');
+    head.style.cssText = 'color:#888;font-size:13px;margin-bottom:8px;';
+    head.textContent = notice;
+    resultDiv.appendChild(head);
+  }
+  appendResult(resultDiv, text);
+  resultDiv.style.display = 'block';
 }
 
-function doScan(delay = 0) {
+// 多二维码结果展示（每个结果独立成块，各带操作按钮）
+function showMultiResult(arr) {
+  const uniq = Array.from(new Set(arr));
+  if (uniq.length === 1) {
+    showResult(uniq[0], arr.length > 1 ? '检测到多个二维码，内容均相同：' : null);
+    return;
+  }
+  resultDiv.innerHTML = '';
+  const head = document.createElement('div');
+  head.style.cssText = 'color:#888;font-size:13px;margin-bottom:8px;';
+  head.textContent = '检测到多个二维码，内容如下：';
+  resultDiv.appendChild(head);
+  uniq.forEach((text, idx) => {
+    const box = document.createElement('div');
+    box.style.cssText = 'margin-bottom:10px;padding:7px 8px;background:#f8f8fa;border-radius:4px;';
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:13px;color:#333;margin-bottom:4px;';
+    label.textContent = '二维码' + (idx + 1) + '：';
+    box.appendChild(label);
+    appendResult(box, text);
+    resultDiv.appendChild(box);
+  });
+  resultDiv.style.display = 'block';
+}
+
+// 统一处理后台返回的识别结果
+function handleDecodeResult(result) {
+  showLoading(false);
+  if (!result) { showError('插件后台无响应'); return; }
+  if (result.error) { showError(result.error); }
+  else if (result.multi) { showMultiResult(result.multi); }
+  else { showResult(result.data); }
+}
+
+// ---------- 立即/延迟扫描 ----------
+function doScan(delay) {
+  clearTimers();
   hideResult();
   hideError();
   showLoading(false);
@@ -79,12 +134,13 @@ function doScan(delay = 0) {
     countdown.style.display = 'block';
     countdownTimer = setInterval(() => {
       sec--;
-      countdown.textContent = sec > 0 ? sec + ' 秒' : '';
-      countdown.style.display = countdown.textContent ? 'block' : 'none';
       if (sec <= 0) {
         clearInterval(countdownTimer);
+        countdownTimer = null;
         countdown.style.display = 'none';
         realScan();
+      } else {
+        countdown.textContent = sec + ' 秒';
       }
     }, 1000);
   } else {
@@ -94,127 +150,28 @@ function doScan(delay = 0) {
 
 function realScan() {
   showLoading(true);
-  chrome.runtime.sendMessage({action: 'captureScreenshot'}, (response) => {
-    if (!response || response.error) {
-      showLoading(false);
-      showError(response ? response.error : '插件后台无响应');
-      return;
-    }
-    // 用canvas和jsQR解码
-    decodeQRCodeFromDataUrl(response.dataUrl).then(result => {
-      showLoading(false);
-      if (result.error) {
-        showError(result.error);
-      } else if (result.multi) {
-        showMultiResult(result.multi);
-      } else {
-        showResult(result.data);
-      }
-    });
-  });
+  chrome.runtime.sendMessage({action: 'decodeScreenshot'}, handleDecodeResult);
 }
 
-// 多二维码内容展示
-function showMultiResult(arr) {
-  resultDiv.innerHTML = '';
-  const uniq = Array.from(new Set(arr));
-  if (uniq.length === 1 && arr.length > 1) {
-    // 多个二维码内容相同
-    resultDiv.innerHTML = `<div style='color:#888;font-size:13px;margin-bottom:8px;'>检测到多个二维码，内容均相同：</div>`;
-    showResult(uniq[0]);
-  } else if (uniq.length > 1) {
-    resultDiv.innerHTML = `<div style='color:#888;font-size:13px;margin-bottom:8px;'>检测到多个二维码，内容如下：</div>`;
-    uniq.forEach((text, idx) => {
-      const box = document.createElement('div');
-      box.style = 'margin-bottom:10px;padding:7px 8px;background:#f8f8fa;border-radius:4px;';
-      box.innerHTML = `<div style='font-size:13px;color:#333;margin-bottom:4px;'>二维码${idx+1}：</div>`;
-      // 复用showResult逻辑
-      let tmp = document.createElement('div');
-      resultDiv.appendChild(box);
-      showResult.call({resultDiv:box}, text);
-    });
-    resultDiv.style.display = 'block';
-  } else {
-    showResult(arr[0]);
-  }
+// ---------- 手动上传 ----------
+// 图片（上传文件/剪贴板）交给后台统一解码
+function decodeImage(dataUrl) {
+  showLoading(true);
+  chrome.runtime.sendMessage({action: 'decodeImageDataUrl', dataUrl: dataUrl}, handleDecodeResult);
 }
-
-// 多二维码检测
-function decodeQRCodeFromDataUrl(dataUrl) {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, img.width, img.height);
-      try {
-        // 1. 先整体全图扫描
-        const first = window.jsQR(imageData.data, img.width, img.height);
-        if (first && first.data) {
-          resolve({ data: first.data });
-          return;
-        }
-        // 2. 多区域滑窗扫描
-        const results = [];
-        const step = Math.max(120, Math.floor(Math.min(img.width, img.height) / 3)); // 自适应窗口
-        for(let y=0; y<=img.height-step; y+=step/2) {
-          for(let x=0; x<=img.width-step; x+=step/2) {
-            const sub = ctx.getImageData(x, y, step, step);
-            const code = window.jsQR(sub.data, step, step);
-            if (code && code.data) {
-              results.push({data: code.data, x: x+code.location.topLeftCorner.x, y: y+code.location.topLeftCorner.y});
-            }
-          }
-        }
-        // 去重（内容+位置）
-        const uniq = [];
-        results.forEach(r => {
-          if (!uniq.some(u => u.data === r.data && Math.abs(u.x-r.x)<10 && Math.abs(u.y-r.y)<10)) {
-            uniq.push(r);
-          }
-        });
-        if (uniq.length === 0) {
-          resolve({error: '未检测到二维码'});
-        } else if (uniq.length === 1) {
-          resolve({data: uniq[0].data});
-        } else {
-          resolve({multi: uniq.map(u=>u.data)});
-        }
-      } catch (e) {
-        resolve({error: '解码异常: ' + e.message});
-      }
-    };
-    img.onerror = function() {
-      resolve({error: '图片加载失败'});
-    };
-    img.src = dataUrl;
-  });
-}
-
-
-
-
-scanBtn.onclick = () => doScan(0);
-delayBtn.onclick = () => doScan(3);
-regionBtn.onclick = () => { hideUploadBtns(); regionScanDelay(3); };
-// 手动上传按钮
-const uploadBtn = document.getElementById('uploadBtn');
-uploadBtn.onclick = showUploadBtns;
 
 function showUploadBtns() {
+  clearTimers();
   hideResult();
   hideError();
   hideUploadBtns();
-  // 创建操作按钮组
   const uploadGroup = document.createElement('div');
   uploadGroup.id = 'qr-upload-group';
   uploadGroup.style.textAlign = 'center';
-  // 读取剪切板按钮
+
+  // 读取剪贴板
   const btnClipboard = document.createElement('button');
-  btnClipboard.textContent = '读取剪切板';
+  btnClipboard.textContent = '读取剪贴板';
   btnClipboard.className = 'btn blue';
   btnClipboard.style.marginRight = '12px';
   btnClipboard.onclick = async () => {
@@ -227,30 +184,26 @@ function showUploadBtns() {
             if (type.startsWith('image/')) {
               const blob = await item.getType(type);
               const reader = new FileReader();
-              reader.onload = e => {
-                decodeQRCodeFromDataUrl(e.target.result).then(result => {
-                  if (result.error) showError(result.error);
-                  else if (result.multi) showMultiResult(result.multi);
-                  else showResult(result.data);
-                });
-              };
+              reader.onload = e => decodeImage(e.target.result);
+              reader.onerror = () => showError('读取剪贴板图片失败');
               reader.readAsDataURL(blob);
               return;
             }
           }
         }
-        showError('剪切板中没有图片');
+        showError('剪贴板中没有图片');
       } else {
-        showError('当前浏览器不支持图片剪切板读取');
+        showError('当前浏览器不支持图片剪贴板读取');
       }
     } catch (e) {
-      showError('读取剪切板失败: ' + e.message);
+      showError('读取剪贴板失败: ' + e.message);
     } finally {
       btnClipboard.disabled = false;
     }
   };
   uploadGroup.appendChild(btnClipboard);
-  // 上传文件按钮
+
+  // 上传文件
   const btnFile = document.createElement('button');
   btnFile.textContent = '上传文件';
   btnFile.className = 'btn blue';
@@ -261,99 +214,70 @@ function showUploadBtns() {
     input.onchange = () => {
       if (input.files && input.files[0]) {
         const reader = new FileReader();
-        reader.onload = e => {
-          decodeQRCodeFromDataUrl(e.target.result).then(result => {
-            if (result.error) showError(result.error);
-            else if (result.multi) showMultiResult(result.multi);
-            else showResult(result.data);
-          });
-        };
+        reader.onload = e => decodeImage(e.target.result);
+        reader.onerror = () => showError('读取文件失败');
         reader.readAsDataURL(input.files[0]);
       }
     };
     input.click();
   };
   uploadGroup.appendChild(btnFile);
-  // 显示到倒计时区域
-  const countdown = document.getElementById('countdown');
+
   countdown.innerHTML = '';
   countdown.appendChild(uploadGroup);
   countdown.style.display = 'block';
 }
+
 function hideUploadBtns() {
-  const countdown = document.getElementById('countdown');
   const uploadGroup = document.getElementById('qr-upload-group');
   if (uploadGroup && uploadGroup.parentNode) uploadGroup.parentNode.removeChild(uploadGroup);
   if (!countdown.textContent.trim()) countdown.style.display = 'none';
 }
 
-// 区域截图识别模式
-function regionScanDelay(delay = 3) {
+// ---------- 区域截图 ----------
+function regionScanDelay(delay) {
+  clearTimers();
   hideResult();
   hideError();
   showLoading(false);
   let sec = delay;
   countdown.textContent = sec + ' 秒后可框选区域';
   countdown.style.display = 'block';
-  if (window._regionTimer) clearInterval(window._regionTimer);
-  window._regionTimer = setInterval(() => {
+  regionTimer = setInterval(() => {
     sec--;
-    countdown.textContent = sec > 0 ? sec + ' 秒后可框选区域' : '';
-    countdown.style.display = countdown.textContent ? 'block' : 'none';
     if (sec <= 0) {
-      clearInterval(window._regionTimer);
+      clearInterval(regionTimer);
+      regionTimer = null;
       countdown.style.display = 'none';
       startRegionSelect();
+    } else {
+      countdown.textContent = sec + ' 秒后可框选区域';
     }
   }, 1000);
 }
 
 function startRegionSelect() {
-  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    chrome.runtime.sendMessage({
-      action: 'injectRegionScript',
-      tabId: tabs[0].id
-    });
-  });
-}
-
-// 监听内容脚本的区域坐标，后台截图并裁剪
-window.addEventListener('message', function(e) {
-  if (!e.data || !e.data.momoqrdecoder_region) return;
-  const {x, y, w, h} = e.data.momoqrdecoder_region;
-  // 通知popup后台截图
-  chrome.runtime.sendMessage({action: 'captureScreenshot'}, (response) => {
-    if (!response || response.error) {
-      showLoading(false);
-      showError(response ? response.error : '插件后台无响应');
-      return;
-    }
-    cropAndDecode(response.dataUrl, x, y, w, h);
-  });
-});
-
-function cropAndDecode(dataUrl, x, y, w, h) {
-  showLoading(true);
-  const img = new window.Image();
-  img.onload = function() {
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
-    const croppedDataUrl = canvas.toDataURL('image/png');
-    decodeQRCodeFromDataUrl(croppedDataUrl).then(result => {
-      showLoading(false);
-      if (result.error) {
-        showError(result.error);
-      } else if (result.multi) {
-        showMultiResult(result.multi);
-      } else {
-        showResult(result.data);
+  chrome.tabs.query({active: true, currentWindow: true}, tabs => {
+    if (!tabs || !tabs.length) { showError('未找到活动标签页'); return; }
+    chrome.runtime.sendMessage({action: 'injectRegionScript', tabId: tabs[0].id}, resp => {
+      if (chrome.runtime.lastError) {
+        showError('注入脚本失败: ' + chrome.runtime.lastError.message);
+        return;
       }
+      if (!resp) { showError('插件后台无响应'); return; }
+      if (resp.error) { showError(resp.error); return; }
+      countdown.textContent = '请在网页上拖动框选区域';
+      countdown.style.display = 'block';
     });
-  };
-  img.onerror = function() {
-    showError('图片加载失败');
-  };
-  img.src = dataUrl;
+  });
 }
+
+// ---------- 事件绑定 ----------
+scanBtn.onclick = () => doScan(0);
+delayBtn.onclick = () => doScan(3);
+regionBtn.onclick = () => regionScanDelay(3);
+uploadBtn.onclick = showUploadBtns;
+
+// ---------- 版本号（从 manifest 动态读取） ----------
+const manifest = chrome.runtime.getManifest();
+document.getElementById('version').textContent = 'v' + (manifest.version || '');

@@ -1,0 +1,7 @@
+output/
+temp/
+node_modules/
+
+*.pem
+build.cmd
+build.ps1

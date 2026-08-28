@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "momoQRdecoder",
-  "version": "1.2.0",
+  "name": "默默二维码解码器",
+  "version": "26.8.28",
   "description": "自动扫描当前网页二维码并解码，支持延迟扫描、复制和新标签页打开。",
+  "minimum_chrome_version": "109",
   "icons": {
     "16": "src/momoqrdecoder-icon.png",
     "32": "src/momoqrdecoder-icon.png",
@@ -11,32 +12,24 @@
   },
   "permissions": [
     "activeTab",
-    "tabs",
     "clipboardWrite",
     "clipboardRead",
-    "scripting"
+    "scripting",
+    "offscreen"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'",
+    "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' data: blob:; connect-src 'self' data: blob:; img-src 'self' data: blob:; media-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; default-src 'self' data: blob:"
+  },
+  "sandbox": {
+    "pages": ["src/sandbox.html"]
+  },
   "background": {
     "service_worker": "src/background.js"
   },
   "action": {
     "default_popup": "src/popup.html",
+    "default_title": "momoQRdecoder",
     "default_icon": "src/momoqrdecoder-icon.png"
-  },
-  "host_permissions": [
-    "<all_urls>"
-  ],
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["src/qrNotify.js"],
-      "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["src/jsQR.js", "src/regionOverlay.js"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }

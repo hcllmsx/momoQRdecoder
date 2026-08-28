@@ -1,78 +1,136 @@
-// 页面右上角二维码识别结果悬浮通知
-(function(){
-  if (window.__momoqrdecoder_notify) return;
-  function showQRNotify(payload) {
-    // 清理旧的
-    if (window.__momoqrdecoder_notify) window.__momoqrdecoder_notify.remove();
-    const box = document.createElement('div');
-    box.style = 'position:fixed;top:20px;right:24px;z-index:999999;font-size:15px;background:#fff;box-shadow:0 2px 16px rgba(0,0,0,0.16);border-radius:8px;padding:16px 18px 14px 18px;min-width:260px;max-width:420px;color:#222;line-height:1.7;';
-    box.style.transition = 'opacity 0.25s';
-    box.id = '__momoqrdecoder_notify';
-    let html = '';
-    if (payload.error) {
-      html += `<div style='font-weight:bold;color:#e53935;font-size:16px;margin-bottom:6px;'>二维码识别失败</div>`;
-      html += `<div>${payload.error}</div>`;
-    } else if (payload.multi) {
-      html += `<div style='font-weight:bold;color:#2196f3;font-size:16px;margin-bottom:6px;'>识别到多个二维码</div>`;
-      payload.multi.forEach((text,idx)=>{
-        html += `<div style='margin-bottom:7px;'><span style='color:#666;font-size:13px;'>二维码${idx+1}：</span><span style='color:#222;'>${text}</span></div>`;
+// 页面右上角二维码识别结果悬浮通知（由 background.js 按需注入）
+// 注意：所有动态内容一律使用 textContent 渲染，禁止拼进 innerHTML（防 XSS）
+(function () {
+  if (window.__momoqrdecoder_notify_installed) return;
+  window.__momoqrdecoder_notify_installed = true;
+
+  const BTN_STYLE = 'background:#2196f3;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:14px;';
+
+  // 复制文本：优先 Clipboard API，失败时回退 execCommand（content script 中常见）
+  function copyText(text, onDone, onFail) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(onDone).catch(function () {
+        fallbackCopy(text, onDone, onFail);
       });
     } else {
-      html += `<div style='font-weight:bold;color:#4caf50;font-size:16px;margin-bottom:6px;'>二维码内容</div>`;
-      html += `<div style='word-break:break-all;'>${payload.data}</div>`;
+      fallbackCopy(text, onDone, onFail);
     }
-    box.innerHTML = html;
+  }
+
+  function fallbackCopy(text, onDone, onFail) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      if (ok) { onDone(); } else { onFail(); }
+    } catch (e) {
+      onFail();
+    }
+  }
+
+  function flashBtn(btn, okText) {
+    btn.textContent = okText;
+    setTimeout(function () { btn.textContent = '复制内容'; }, 1200);
+  }
+
+  function showQRNotify(payload) {
+    // 清理旧通知
+    if (window.__momoqrdecoder_notify) window.__momoqrdecoder_notify.remove();
+
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;top:20px;right:24px;z-index:999999;font-size:15px;background:#fff;box-shadow:0 2px 16px rgba(0,0,0,0.16);border-radius:8px;padding:16px 18px 14px 18px;min-width:260px;max-width:420px;color:#222;line-height:1.7;opacity:0;transition:opacity 0.25s;';
+    box.id = '__momoqrdecoder_notify';
+
+    // 标题
+    const title = document.createElement('div');
+    title.style.cssText = 'font-weight:bold;font-size:16px;margin-bottom:6px;';
+    if (payload.error) {
+      title.textContent = '二维码识别失败';
+      title.style.color = '#e53935';
+      const body = document.createElement('div');
+      body.textContent = payload.error;
+      box.appendChild(title);
+      box.appendChild(body);
+    } else if (payload.multi) {
+      title.textContent = '识别到多个二维码';
+      title.style.color = '#2196f3';
+      box.appendChild(title);
+      payload.multi.forEach(function (text, idx) {
+        const row = document.createElement('div');
+        row.style.cssText = 'margin-bottom:7px;';
+        const label = document.createElement('span');
+        label.style.cssText = 'color:#666;font-size:13px;';
+        label.textContent = '二维码' + (idx + 1) + '：';
+        const content = document.createElement('span');
+        content.style.color = '#222';
+        content.textContent = text;
+        row.appendChild(label);
+        row.appendChild(content);
+        box.appendChild(row);
+      });
+    } else {
+      title.textContent = '二维码内容';
+      title.style.color = '#4caf50';
+      const body = document.createElement('div');
+      body.style.cssText = 'word-break:break-all;';
+      body.textContent = payload.data || '';
+      box.appendChild(title);
+      box.appendChild(body);
+    }
+
     // 操作按钮
-    let btns = document.createElement('div');
-    btns.style = 'margin-top:10px;text-align:right;';
-    // 复制按钮
-    let btnCopy = document.createElement('button');
+    const btns = document.createElement('div');
+    btns.style.cssText = 'margin-top:10px;text-align:right;';
+
+    const btnCopy = document.createElement('button');
     btnCopy.textContent = '复制内容';
-    btnCopy.className = 'btn';
-    btnCopy.style = 'margin-right:10px;background:#2196f3;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;';
-    btnCopy.onclick = ()=>{
-      let txt = payload.multi ? payload.multi.join('\n') : (payload.data||payload.error||'');
-      navigator.clipboard.writeText(txt);
-      btnCopy.textContent = '已复制!';
-      setTimeout(()=>btnCopy.textContent='复制内容', 1200);
+    btnCopy.style.cssText = 'margin-right:10px;' + BTN_STYLE;
+    btnCopy.onclick = function () {
+      const txt = payload.multi ? payload.multi.join('\n') : (payload.data || payload.error || '');
+      copyText(txt, function () { flashBtn(btnCopy, '已复制!'); }, function () { flashBtn(btnCopy, '复制失败'); });
     };
     btns.appendChild(btnCopy);
-    // 新标签页打开按钮（只对单个二维码且内容为网址时）
-    let url = payload.data;
+
+    // 新标签页打开（仅单个结果且为 http(s) 网址）
+    const url = payload.data;
     if (url && /^https?:\/\//i.test(url)) {
-      let btnOpen = document.createElement('button');
+      const btnOpen = document.createElement('button');
       btnOpen.textContent = '新标签页打开';
-      btnOpen.className = 'btn';
-      btnOpen.style = 'background:#4caf50;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;';
-      btnOpen.onclick = ()=>window.open(url, '_blank');
+      btnOpen.style.cssText = 'background:#4caf50;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:14px;';
+      btnOpen.onclick = function () { window.open(url, '_blank'); };
       btns.appendChild(btnOpen);
     }
     box.appendChild(btns);
+
     // 关闭按钮
-    let btnClose = document.createElement('span');
+    const btnClose = document.createElement('span');
     btnClose.textContent = '×';
-    btnClose.style = 'position:absolute;top:7px;right:12px;font-size:21px;color:#888;cursor:pointer;';
-    btnClose.onclick = ()=>box.remove();
+    btnClose.style.cssText = 'position:absolute;top:7px;right:12px;font-size:21px;color:#888;cursor:pointer;';
+    btnClose.onclick = function () { box.remove(); };
     box.appendChild(btnClose);
+
     document.body.appendChild(box);
     window.__momoqrdecoder_notify = box;
-    setTimeout(()=>{
-      if (window.__momoqrdecoder_notify) window.__momoqrdecoder_notify.style.opacity = '1';
-    }, 50);
-    // 自动消失
-    setTimeout(()=>{
-      if (window.__momoqrdecoder_notify) window.__momoqrdecoder_notify.remove();
+    // 淡入
+    requestAnimationFrame(function () { box.style.opacity = '1'; });
+    // 自动淡出消失
+    setTimeout(function () {
+      if (window.__momoqrdecoder_notify === box) {
+        box.style.opacity = '0';
+        setTimeout(function () { box.remove(); }, 300);
+      }
     }, 12000);
   }
-  // 允许 background.js 直接发消息
-  chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
+
+  // 接收 background.js 的消息
+  chrome.runtime.onMessage.addListener(function (msg) {
     if (msg && msg.__momoqrdecoder_notify) {
       showQRNotify(msg.__momoqrdecoder_notify);
-    }
-  });
-  window.addEventListener('message', function(e) {
-    if (e.data && e.data.__momoqrdecoder_notify) {
-      showQRNotify(e.data.__momoqrdecoder_notify);
     }
   });
 })();
