@@ -53,12 +53,14 @@ jobs:
           echo "manifest.json version -> ${VER}"
 
       # 打包 Chrome 扩展：manifest.json + src/（含 models 与 icon）
+      # 注意：zip 路径必须用干净的相对路径（manifest.json、src），
+      # 不能带 ../ ，否则 zip 内会出现父目录访问器，商店上传会被拒绝
       - name: Build extension zip
         run: |
           mkdir -p dist
-          cd dist
-          zip -r "momoQRdecoder-${{ steps.version.outputs.version }}.zip" ../manifest.json ../src
-          cd ..
+          zip -r "dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip" manifest.json src
+          # 打印 zip 内容清单，确认无 ../ 父目录访问器
+          unzip -l "dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip"
           ls -lh dist/
 
       # 生成 SHA256 校验文件（发布后可用 sha256sum -c 验证下载包完整性）
@@ -79,7 +81,7 @@ jobs:
             ## momoQRdecoder v${{ steps.version.outputs.version }}
 
             ### 安装
-            1. 下载 `momoQRdecoder-${{ steps.version.outputs.version }}.zip`
+            1. 下载 `momoQRdecoder-v${{ steps.version.outputs.version }}.zip`
             2. 解压后，在浏览器扩展管理页开启「开发者模式」
             3. 点击「加载已解压的扩展程序」，选择解压出的文件夹
 
