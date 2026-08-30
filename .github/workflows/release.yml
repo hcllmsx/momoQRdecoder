@@ -64,6 +64,21 @@ jobs:
           " "${VER}"
           echo "manifest.json version -> ${VER}"
 
+      # 打包前去掉扩展名 " dev" 后缀：本地源码带 dev（区分开发版），商店包不带
+      - name: Strip dev suffix from extension name
+        run: |
+          python3 -c "
+          import glob, re
+          for path in glob.glob('_locales/*/messages.json'):
+              with open(path, encoding='utf-8') as f:
+                  text = f.read()
+              new_text = re.sub(r'(\"(?:extName|extTitle)\"\s*:\s*\{\s*\"message\"\s*:\s*\")[^\"]*) dev(\")', r'\1\2', text)
+              if new_text != text:
+                  with open(path, 'w', encoding='utf-8') as f:
+                      f.write(new_text)
+              print('processed:', path)
+          "
+
       # 打包 Chrome 扩展：manifest.json + src/（含 models 与 icon）
       # 注意：zip 路径必须用干净的相对路径（manifest.json、src），
       # 不能带 ../ ，否则 zip 内会出现父目录访问器，商店上传会被拒绝

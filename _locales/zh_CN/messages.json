@@ -1,7 +1,7 @@
 {
-  "extName": { "message": "默默二维码解码器" },
+  "extName": { "message": "默默二维码解码器 dev" },
   "extDesc": { "message": "自动扫描当前网页二维码并解码，支持延迟扫描、复制和新标签页打开。" },
-  "extTitle": { "message": "默默二维码解码器" },
+  "extTitle": { "message": "默默二维码解码器 dev" },
 
   "scanNow": { "message": "立即扫描" },
   "delayScan": { "message": "延迟扫描" },
