@@ -93,7 +93,7 @@ jobs:
             ## momoQRdecoder v${{ steps.version.outputs.version }}
 
             ### 安装
-            > **Edge 用户**：插件已提交 Edge 扩展商店审核，审核通过后可直接在商店安装；以下手动安装方式适用于 **Chrome** 及其他 Chromium 浏览器。
+            > **Edge 用户**：插件已上架 Edge 扩展商店，可直接在商店安装；以下手动安装方式适用于 **Chrome** 及其他 Chromium 浏览器。
 
             1. 下载 `momoQRdecoder-v${{ steps.version.outputs.version }}.zip`
             2. 解压后，在浏览器扩展管理页开启「开发者模式」

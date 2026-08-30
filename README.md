@@ -5,7 +5,7 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3）。
 > [!IMPORTANT]
 > **上架状态**：
 >
-> - 本扩展已提交 **Microsoft Edge 扩展商店**审核（目前仍在审核中），审核通过后可直接在商店搜索「默默二维码解码器」（或 MoMo QR Decoder）安装。
+> - 本扩展已上架 **Microsoft Edge 扩展商店**，可直接在商店搜索「默默二维码解码器」（或 MoMo QR Decoder）安装：[默默二维码解码器 - Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/%E9%BB%98%E9%BB%98%E4%BA%8C%E7%BB%B4%E7%A0%81%E8%A7%A3%E7%A0%81%E5%99%A8/phciegpefagfbgadpejnfjgkoncgmecl)。
 > 
 > - **Chrome 用户**：Chrome 商店暂未上架，请前往 [Releases](https://github.com/hcllmsx/momoQRdecoder/releases) 下载 zip 压缩包，按下方「使用」说明手动安装。
 
