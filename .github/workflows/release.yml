@@ -72,11 +72,29 @@ jobs:
           for path in glob.glob('_locales/*/messages.json'):
               with open(path, encoding='utf-8') as f:
                   text = f.read()
-              new_text = re.sub(r'(\"(?:extName|extTitle)\"\s*:\s*\{\s*\"message\"\s*:\s*\")[^\"]*) dev(\")', r'\1\2', text)
+              # 注意：捕获组1 需包含 [^\"]*（匹配扩展名主体），否则括号不平衡且 dev 无法被剥离
+              new_text = re.sub(r'(\"(?:extName|extTitle)\"\s*:\s*\{\s*\"message\"\s*:\s*\"[^\"]*) dev(\")', r'\1\2', text)
               if new_text != text:
                   with open(path, 'w', encoding='utf-8') as f:
                       f.write(new_text)
               print('processed:', path)
+          "
+
+      # 移除上传页的"环境诊断"区：仅供开发排查，正式包不携带（与 build.ps1 的处理保持一致）
+      - name: Strip diagnostics block from upload page
+        run: |
+          python3 -c "
+          import re
+          path = 'src/upload.html'
+          with open(path, encoding='utf-8') as f:
+              text = f.read()
+          new_text = re.sub(r'(?s)[ \t]*<!--\s*DIAG-BEGIN\s*-->.*?<!--\s*DIAG-END\s*-->[ \t]*\r?\n?', '', text)
+          if new_text == text:
+              print('::warning::未匹配到 DIAG-BEGIN/DIAG-END 标记，环境诊断区未被移除')
+          else:
+              with open(path, 'w', encoding='utf-8') as f:
+                  f.write(new_text)
+              print('已移除环境诊断区:', path)
           "
 
       # 打包 Chrome 扩展：manifest.json + src/（含 models 与 icon）
