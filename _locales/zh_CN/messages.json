@@ -30,6 +30,12 @@
   "clipboardFail": { "message": "读取剪贴板失败: $1" },
   "uploadFile": { "message": "上传文件" },
   "fileReadFail": { "message": "读取文件失败" },
+  "uploadInNewTab": { "message": "在新页面上传" },
+  "uploadPageTitle": { "message": "上传图片解码" },
+  "uploadHint": { "message": "选择一张包含二维码的图片" },
+  "noImageFile": { "message": "请选择图片文件" },
+  "diagTitle": { "message": "环境诊断（反馈问题时请一并截图）" },
+  "pickerTip": { "message": "如未弹出选择窗口，请检查系统是否已授予本浏览器「文件/相册」权限" },
 
   "noActiveTab": { "message": "未找到活动标签页" },
   "injectFail": { "message": "注入脚本失败: $1" },

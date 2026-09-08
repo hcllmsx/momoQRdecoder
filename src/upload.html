@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <!-- 移动端适配：本页是手机端上传图片的主要入口 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>momoQRdecoder</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #f7f7fa;
+      color: #222;
+    }
+    .card {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      padding: 20px 16px;
+      text-align: center;
+    }
+    h1 { margin: 0 0 6px 0; font-size: 19px; }
+    .hint { margin: 0 0 18px 0; font-size: 13px; color: #888; line-height: 1.6; }
+    .btn {
+      display: inline-block;
+      margin: 6px 4px;
+      padding: 12px 22px;
+      min-height: 44px;
+      background: #2196f3;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { background: #1565c0; }
+    .btn.ghost { background: #eef2f6; color: #455a64; }
+    .btn.ghost:active { background: #dbe3ea; }
+    .btn[disabled] { opacity: .6; }
+    #loading { color: #888; font-size: 14px; margin-top: 16px; }
+    #loading .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #d8d8d8;
+      border-top-color: #43b047;
+      border-radius: 50%;
+      vertical-align: -3px;
+      margin-right: 8px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #result {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f8f8fa;
+      border-radius: 6px;
+      word-break: break-all;
+      font-size: 15px;
+      text-align: left;
+    }
+    #result .head { color: #888; font-size: 13px; margin-bottom: 8px; }
+    #result .qr-box { margin-bottom: 10px; padding: 8px; background: #fff; border-radius: 4px; }
+    #result .qr-label { font-size: 13px; color: #333; margin-bottom: 4px; }
+    #error { margin-top: 16px; color: #e53935; font-size: 14px; }
+    .actions { text-align: center; margin-top: 10px; }
+    .footer {
+      text-align: center;
+      color: #aaa;
+      font-size: 11px;
+      margin-top: 16px;
+      line-height: 1.8;
+      user-select: none;
+    }
+    .footer a { color: #888; text-decoration: none; }
+    /* 第一行扩展名加重一档，与下面的署名行拉开层次（不抢 h1 的视觉重心） */
+    .footer .ext-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      letter-spacing: 0.2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 data-i18n="uploadPageTitle"></h1>
+    <p class="hint" data-i18n="uploadHint"></p>
+    <button class="btn" id="pickBtn" data-i18n="uploadFile"></button>
+    <!-- 常驻说明：不做"点击后 N 秒无响应"的判定——用户挑照片可能耗时数十秒，
+         定时提示只会误报并打断操作 -->
+    <div data-i18n="pickerTip" style="margin-top:10px;font-size:12px;color:#9aa5b1;line-height:1.6;"></div>
+    <div id="loading" style="display:none;"><span class="spinner"></span><span data-i18n="scanning"></span></div>
+    <div id="result" style="display:none;"></div>
+    <div id="error" style="display:none;"></div>
+    <!-- DIAG-BEGIN -->
+    <!-- 环境诊断区：仅供开发/排查；正式打包时由 build.ps1 整块移除（勿删本注释对） -->
+    <details id="diag" style="margin-top:18px;text-align:left;font-size:12px;color:#9aa5b1;">
+      <summary data-i18n="diagTitle"></summary>
+      <pre id="diagBody" style="white-space:pre-wrap;word-break:break-all;margin:8px 0 0 0;"></pre>
+    </details>
+    <!-- DIAG-END -->
+    <footer class="footer">
+      <div class="ext-name"><span id="extName"></span></div>
+      <div>by <a href="https://space.bilibili.com/255947051" target="_blank" rel="noopener noreferrer">火车啦啦</a> ·
+        <a id="repoLink" href="https://github.com/hcllmsx/momoQRdecoder" target="_blank" rel="noopener noreferrer">GitHub</a></div>
+    </footer>
+    <!-- 常驻 file input：移动端要求 input 在文档中且参与渲染，故离屏而非 display:none -->
+    <input id="fileInput" type="file" accept="image/*"
+           style="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;">
+  </div>
+  <script src="upload.js"></script>
+</body>
+</html>

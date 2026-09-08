@@ -122,6 +122,11 @@
   <footer class="footer">
     momoQRdecoder · by <a href="https://space.bilibili.com/255947051" target="_blank" rel="noopener noreferrer">火车啦啦</a>
   </footer>
+  <!-- 常驻 file input：移动端(Android Edge 等)内核要求 file input 必须已插入
+       文档且参与渲染，动态 createElement 后直接 click() 不会唤起文件选择器。
+       因此这里预置一个真实 input，用离屏定位隐藏（不可用 display:none）。 -->
+  <input id="qr-file-input" type="file" accept="image/*"
+         style="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;">
   <script src="popup.js"></script>
 </body>
 </html>

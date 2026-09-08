@@ -18,6 +18,7 @@ const countdown = document.getElementById('countdown');
 const loading = document.getElementById('loading');
 const resultDiv = document.getElementById('result');
 const errorDiv = document.getElementById('error');
+const fileInput = document.getElementById('qr-file-input');
 
 let countdownTimer = null;
 let regionTimer = null;
@@ -199,6 +200,76 @@ function decodeImage(dataUrl) {
   chrome.runtime.sendMessage({action: 'decodeImageDataUrl', dataUrl: dataUrl}, handleDecodeResult);
 }
 
+// 是否移动环境：移动版浏览器(Android Edge 等)的扩展 popup 常常无法唤起
+// 系统文件选择器，需要改用独立上传页
+function isMobileEnv() {
+  // 两个信号取"或"：桌面 DevTools 的设备模拟下 UA 与 userAgentData 可能不一致
+  const uaMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent || '');
+  try {
+    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+      return navigator.userAgentData.mobile || uaMobile;
+    }
+  } catch (e) { /* 忽略：部分浏览器无 userAgentData */ }
+  return uaMobile;
+}
+
+// 兜底：在新标签页打开扩展内上传页（普通标签页中 file input 可正常工作）
+function openUploadPage() {
+  chrome.tabs.create({url: chrome.runtime.getURL('src/upload.html')}, () => {
+    if (chrome.runtime.lastError) {
+      showError(t('openNewTabFailed', [chrome.runtime.lastError.message]));
+    }
+  });
+}
+
+// ---------- 文件选择器 ----------
+// 选择器成功弹出时 popup 必定失焦或隐藏；据此判断"点了没反应"的场景
+let pickerWatchTimer = null;
+
+function onVisibilityCheck() { if (document.hidden) markPickerOpened(); }
+
+function markPickerOpened() {
+  if (pickerWatchTimer) { clearTimeout(pickerWatchTimer); pickerWatchTimer = null; }
+  window.removeEventListener('blur', markPickerOpened);
+  document.removeEventListener('visibilitychange', onVisibilityCheck);
+}
+
+// 唤起文件选择器：优先 showPicker()，失败回退 click()
+function pickFile() {
+  if (!fileInput) { openUploadPage(); return; }
+  fileInput.value = ''; // 清空以便重复选择同一文件
+  markPickerOpened();
+  window.addEventListener('blur', markPickerOpened, {once: true});
+  document.addEventListener('visibilitychange', onVisibilityCheck, {once: true});
+  try {
+    if (typeof fileInput.showPicker === 'function') fileInput.showPicker();
+    else fileInput.click();
+  } catch (e) {
+    try { fileInput.click(); } catch (e2) { markPickerOpened(); openUploadPage(); return; }
+  }
+  // 1.5s 内既没选中文件、popup 也没失焦 => 选择器未弹出，移动端自动改用上传页
+  pickerWatchTimer = setTimeout(() => {
+    pickerWatchTimer = null;
+    window.removeEventListener('blur', markPickerOpened);
+    document.removeEventListener('visibilitychange', onVisibilityCheck);
+    if (fileInput.files && fileInput.files.length) return;
+    if (isMobileEnv()) openUploadPage();
+  }, 1500);
+}
+
+// change 只注册一次：文件选中后读取并解码
+if (fileInput) {
+  fileInput.addEventListener('change', () => {
+    markPickerOpened();
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => decodeImage(e.target.result);
+    reader.onerror = () => showError(t('fileReadFail'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function showUploadBtns() {
   clearTimers();
   hideResult();
@@ -242,25 +313,22 @@ function showUploadBtns() {
   };
   uploadGroup.appendChild(btnClipboard);
 
-  // 上传文件
-  const btnFile = document.createElement('button');
-  btnFile.textContent = t('uploadFile');
-  btnFile.className = 'btn blue';
-  btnFile.onclick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = () => {
-      if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => decodeImage(e.target.result);
-        reader.onerror = () => showError(t('fileReadFail'));
-        reader.readAsDataURL(input.files[0]);
-      }
-    };
-    input.click();
-  };
-  uploadGroup.appendChild(btnFile);
+  // 上传入口按环境分流：
+  // 移动端 popup 无法唤起系统文件选择器（真机验证），直接给"在新页面上传"，
+  // 省掉一次无效点击和 1.5s 等待；桌面端 popup 选择器可用，直接用"上传文件"。
+  if (isMobileEnv()) {
+    const btnNewTab = document.createElement('button');
+    btnNewTab.textContent = t('uploadInNewTab');
+    btnNewTab.className = 'btn blue';
+    btnNewTab.onclick = openUploadPage;
+    uploadGroup.appendChild(btnNewTab);
+  } else {
+    const btnFile = document.createElement('button');
+    btnFile.textContent = t('uploadFile');
+    btnFile.className = 'btn blue';
+    btnFile.onclick = pickFile;
+    uploadGroup.appendChild(btnFile);
+  }
 
   countdown.innerHTML = '';
   countdown.appendChild(uploadGroup);

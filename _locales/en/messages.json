@@ -30,6 +30,12 @@
   "clipboardFail": { "message": "Failed to read clipboard: $1" },
   "uploadFile": { "message": "Choose File" },
   "fileReadFail": { "message": "Failed to read file" },
+  "uploadInNewTab": { "message": "Upload in a new tab" },
+  "uploadPageTitle": { "message": "Decode from Image" },
+  "uploadHint": { "message": "Choose an image containing a QR code" },
+  "noImageFile": { "message": "Please choose an image file" },
+  "diagTitle": { "message": "Diagnostics (include a screenshot when reporting issues)" },
+  "pickerTip": { "message": "If no file picker appears, check that this browser has been granted file/photo permission" },
 
   "noActiveTab": { "message": "No active tab found" },
   "injectFail": { "message": "Failed to inject script: $1" },
