@@ -34,12 +34,12 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3）。
 版本号**唯一来源**是仓库根目录的 `VERSION` 文件（格式：`x.y.z` 或 `x.y.z.w`，如 `1.2.0`）。
 
 > [!NOTE]
-> **开发版与商店版区分**：本地源码中扩展名带 ` dev` 后缀（如「默默二维码解码器 dev」），便于与商店版区分；`build.cmd` 与 CI 打包时会**自动去掉** ` dev` 后缀，商店包名仍是「默默二维码解码器」。请勿绕过脚本手动打包，以免 dev 后缀进入商店包。
+> **开发版与商店版区分**：本地源码中扩展名带 ` dev` 后缀（如「默默二维码解码器 dev」），便于与商店版区分；`1-run_menu.bat` 与 CI 打包时会**自动去掉** ` dev` 后缀，商店包名仍是「默默二维码解码器」。请勿绕过脚本手动打包，以免 dev 后缀进入商店包。
 >
 > 所有「发布前处理」规则（去 ` dev` 后缀、移除上传页的环境诊断区等）集中在 **`tools/prepare-release.js`**。`build.ps1` 与 `.github/workflows/release.yml` 调用的是**同一个脚本**，因此本地打包与 CI 打包行为始终一致；**新增或修改规则只需改这一个文件**，两条路径自动同步。
 
 > [!IMPORTANT]
-> 修改了根目录 `VERSION` 文件中的版本号后，**必须运行一次 `build.cmd`**，它会自动把新版本号同步到 `manifest.json` 并完成打包。只有完成这一步，版本号才一致，**才能提交并推送到 GitHub**；否则推送后仓库内 `manifest.json` 的版本号仍是旧值。
+> 修改了根目录 `VERSION` 文件中的版本号后，**必须运行一次 `1-run_menu.bat`**，它会自动把新版本号同步到 `manifest.json` 并完成打包。只有完成这一步，版本号才一致，**才能提交并推送到 GitHub**；否则推送后仓库内 `manifest.json` 的版本号仍是旧值。
 
 ## 常见问题
 
@@ -53,7 +53,5 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3）。
 - [WeChatQRCode](https://github.com/opencv/opencv_contrib/tree/master/modules/wechat_qrcode)（OpenCV contrib）— 美化/艺术二维码识别引擎
 
 ## 许可证
-
-Copyright (C) 2025 hcllmsx
 
 本项目以 [GNU General Public License v3.0](LICENSE) 发布（GPL-3.0）。您可以自由使用、修改和分发本项目，但任何基于本项目的衍生作品也**必须**以 GPL-3.0 许可开源，并保留上述版权声明。

@@ -1,8 +1,8 @@
 output/
-temp/
+_temp/
 node_modules/
 
 *.pem
-build.cmd
+1-run_menu.bat
 build.ps1
 STORE_LISTING.md
