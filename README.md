@@ -1,6 +1,6 @@
 # 默默二维码解码器 · momoQRdecoder
 
-Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3），Firefox 版正在等待 AMO 商店审核。
+这是一个 Chrome / Edge / Firefox 浏览器二维码识别扩展
 
 > [!IMPORTANT]
 > **上架状态**：
@@ -25,6 +25,16 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3），Firefox �
 - 结果一键复制，网址可直接新标签页打开
 - 双引擎识别：jsQR + 微信 WeChatQRCode，支持美化/艺术二维码
 
+## 支持平台
+
+| 平台 | 状态 | 说明 |
+| --- | --- | --- |
+| Chrome / Edge（桌面） | 支持 | 全部功能 |
+| Firefox（桌面，154+） | 支持 | 全部功能，正在等待 AMO 商店审核 |
+| Edge（Android） | 支持 | 「立即扫描」「上传图片」；延迟扫描与区域截图依赖鼠标操作，移动端自动隐藏 |
+| Firefox（Android） | 暂不支持 | 尚未适配与验证 |
+| iOS（Edge / Chrome / Safari） | 不支持 | iOS 版 Edge、Chrome 不提供扩展机制；Safari 支持 Web Extension，但本项目未提供 Safari 版本 |
+
 ## 使用
 
 1. 安装后点击浏览器工具栏图标
@@ -34,6 +44,15 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3），Firefox �
 ### Firefox
 
 Firefox 版还在等 AMO 商店审核，准备上架；正式安装方式待审核通过后提供。
+
+### 手机端（Edge Android）
+
+手机端打开扩展后界面会自动精简为两个入口：
+
+1. 「立即扫描」：截取当前页面识别二维码
+2. 「上传图片」：打开独立上传页，从相册选择图片识别
+
+延迟扫描和区域截图依赖鼠标操作，手机端会隐藏这两个入口。
 
 ## 开发者说明：版本号与发布
 

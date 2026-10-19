@@ -387,7 +387,28 @@ function startRegionSelect() {
 scanBtn.onclick = () => doScan(0);
 delayBtn.onclick = () => doScan(3);
 regionBtn.onclick = () => regionScanDelay(3);
-uploadBtn.onclick = showUploadBtns;
+// 移动端：上传按钮直接打开独立上传页（popup 内无法唤起系统文件选择器）
+uploadBtn.onclick = isMobileEnv() ? openUploadPage : showUploadBtns;
+
+// ---------- 移动端精简布局 ----------
+// 延迟扫描需要 popup 在倒计时期间保持打开，区域截图依赖鼠标拖拽框选，
+// 两者在手机（Edge Android 等）上均不可用；直接移除，只保留“立即扫描”和“上传图片”。
+// 桌面端保持四个入口不变。
+function applyMobileLayout() {
+  if (!isMobileEnv()) return;
+  // 弹层高度由浏览器给定，内容垂直居中消除下方大片空白（样式见 popup.html 的 body.mobile）
+  document.body.classList.add('mobile');
+  if (delayBtn) delayBtn.remove();
+  if (regionBtn) regionBtn.remove();
+  const mainRow = document.getElementById('mainRow');
+  const subRow = document.getElementById('subRow');
+  if (mainRow && subRow) {
+    mainRow.appendChild(uploadBtn); // 上传并入第一行，两个按钮并排居中
+    subRow.remove();
+  }
+}
+
+applyMobileLayout();
 
 // ---------- 扩展名与版本号（从 manifest 动态读取） ----------
 const manifest = chrome.runtime.getManifest();
