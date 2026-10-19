@@ -1,5 +1,9 @@
 output/
-_temp/
+# 浏览器扩展目录不允许 _ 开头的文件/目录（_locales 除外）。
+# 临时目录固定用 tmp，不要改回 _temp，否则 Edge/Chrome 加载解压扩展会报：
+# Cannot load extension with file or directory name _temp.
+# Filenames starting with "_" are reserved for use by the system.
+tmp/
 node_modules/
 
 *.pem

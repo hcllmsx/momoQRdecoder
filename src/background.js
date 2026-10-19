@@ -3,8 +3,10 @@
 // （相对路径以本文件所在 src/ 为基准，勿加 src/ 前缀）。
 // Firefox：作为后台事件页运行，依赖由 manifest 的 background.scripts
 // 按顺序预加载；事件页里没有 importScripts，跳过即可。
+// offscreenChrome.js 只在 Chromium 包中存在（Firefox 打包时被移除），
+// 其中定义 self.__momoCreateChromeOffscreen 供 ensureOffscreen 特性检测。
 if (typeof importScripts === 'function') {
-  importScripts('jsQR.js', 'cropAndDecodeQRCode.js');
+  importScripts('jsQR.js', 'cropAndDecodeQRCode.js', 'offscreenChrome.js');
 }
 
 // ---------- 本地化辅助 ----------
@@ -160,13 +162,15 @@ let offscreenReady = null; // offscreen 页面的初始化 Promise
 const OFFSCREEN_FRAME_ID = 'momoqrdecoder-offscreen-frame';
 
 // 确保承载 offscreen 页面的上下文已就绪。
-// Chromium 使用 chrome.offscreen API；Firefox 没有该 API（后台是事件页，
-// 本身拥有 DOM），改为在后台页里嵌入一个隐藏 iframe，消息协议保持一致。
+// Chromium：src/offscreenChrome.js 定义了 self.__momoCreateChromeOffscreen
+//   （chrome.offscreen API），该文件只存在于 Chromium 包中；
+// Firefox：没有该 API（后台是事件页，本身拥有 DOM），改为在后台页里
+//   嵌入一个隐藏 iframe，消息协议保持一致。
 function ensureOffscreen() {
   if (offscreenReady) return offscreenReady;
   offscreenReady = (async () => {
-    if (typeof chrome.offscreen === 'object' && chrome.offscreen.createDocument) {
-      await createChromeOffscreen();
+    if (typeof self.__momoCreateChromeOffscreen === 'function') {
+      await self.__momoCreateChromeOffscreen(t('offscreenJustification'));
     } else {
       await createFirefoxOffscreenFrame();
     }
@@ -175,31 +179,6 @@ function ensureOffscreen() {
     throw e;
   });
   return offscreenReady;
-}
-
-// Chromium：创建 offscreen document
-async function createChromeOffscreen() {
-  // Chrome 116+ 有 hasDocument()；旧版本直接尝试创建，
-  // 若已存在会报错，此时当作已就绪处理。
-  let hasDoc = false;
-  if (typeof chrome.offscreen.hasDocument === 'function') {
-    try {
-      hasDoc = await chrome.offscreen.hasDocument();
-    } catch (e) {
-      hasDoc = false;
-    }
-  }
-  if (hasDoc) return;
-  try {
-    await chrome.offscreen.createDocument({
-      url: 'src/offscreen.html',
-      reasons: ['BLOBS'],
-      justification: t('offscreenJustification')
-    });
-  } catch (e) {
-    // "文档已存在"等场景：若创建失败因文档已在，视为就绪
-    if (!(e && /already|exists/i.test(String(e.message || e)))) throw e;
-  }
 }
 
 // Firefox：在后台事件页内嵌入隐藏 iframe 承载 offscreen.html。

@@ -65,31 +65,43 @@ jobs:
               print(f'{path} version -> {ver}')
           PY
 
-      # 发布前统一处理（去 dev 后缀、移除环境诊断区等）
+      # 发布前统一处理（去 dev 后缀、移除诊断区、剔除平台专属文件等）
       # 规则集中在 tools/prepare-release.js，与本地 build.ps1 调用同一脚本，保证两条路径一致
-      - name: Prepare release assets
-        run: node tools/prepare-release.js .
+      # 两版分别在自己的暂存目录处理，平台专属规则互不影响：
+      # 例如 --target firefox 会移除 Chromium 专属的 src/offscreenChrome.js
+      - name: Prepare Chromium package
+        run: |
+          rm -rf chrome-dist
+          mkdir -p chrome-dist
+          cp manifest.json chrome-dist/
+          cp -r _locales src chrome-dist/
+          node tools/prepare-release.js chrome-dist --target chromium
 
       # 打包 Chrome 扩展：manifest.json + src/（含 models 与 icon）
       # 注意：zip 路径必须用干净的相对路径（manifest.json、src），
       # 不能带 ../ ，否则 zip 内会出现父目录访问器，商店上传会被拒绝
-      - name: Build extension zip
+      - name: Build Chrome extension zip
         run: |
           mkdir -p dist
-          zip -r "dist/momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip" manifest.json _locales src
-          # 打印 zip 内容清单，确认无 ../ 父目录访问器
-          unzip -l "dist/momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip"
+          cd chrome-dist
+          zip -r "../dist/momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip" manifest.json _locales src
+          unzip -l "../dist/momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip"
+          cd ..
           ls -lh dist/
 
       # 打包 Firefox 扩展：Firefox 要求 manifest.json 位于包根，
       # 因此单独组装（firefox 清单 + _locales + src）。
-      # prepare-release.js 已在上一步处理过源文件，两版规则一致。
-      - name: Build Firefox extension zip
+      - name: Prepare Firefox package
         run: |
           rm -rf firefox-dist
           mkdir -p firefox-dist
           cp firefox/manifest.json firefox-dist/manifest.json
           cp -r _locales src firefox-dist/
+          node tools/prepare-release.js firefox-dist --target firefox
+
+      - name: Build Firefox extension zip
+        run: |
+          mkdir -p dist
           cd firefox-dist
           zip -r "../dist/momoQRdecoder-firefox-v${{ steps.version.outputs.version }}.zip" manifest.json _locales src
           unzip -l "../dist/momoQRdecoder-firefox-v${{ steps.version.outputs.version }}.zip"
