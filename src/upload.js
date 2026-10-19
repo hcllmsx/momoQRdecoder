@@ -202,16 +202,8 @@ fileInput.addEventListener('change', () => {
   readBlob(file);
 });
 
-// ---------- 页脚与版本 ----------
-// 扩展名与仓库地址从 manifest 动态读取，避免改名/换仓库后两处不同步
+// ---------- 版本号（仅用于诊断区） ----------
 const manifest = chrome.runtime.getManifest();
-const extNameEl = document.getElementById('extName');
-if (extNameEl) extNameEl.textContent = manifest.name || 'momoQRdecoder';
-const repoEl = document.getElementById('repoLink');
-if (repoEl && manifest.homepage_url) {
-  repoEl.href = manifest.homepage_url;
-  repoEl.title = manifest.homepage_url;
-}
 // 版本号只在诊断区出现，反馈问题时一并截图即可
 log('version: ' + (manifest.version || ''));
 

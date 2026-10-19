@@ -48,21 +48,22 @@ jobs:
           fi
           echo "tag 校验通过: ${GITHUB_REF_NAME}"
 
-      # 将 VERSION 同步进 manifest.json，保证发布包内版本号一致
-      - name: Sync version into manifest.json
+      # 将 VERSION 同步进两份 manifest（Chromium / Firefox），保证发布包内版本号一致
+      - name: Sync version into manifests
         run: |
           VER="${{ steps.version.outputs.version }}"
-          python3 -c "
+          python3 - "${VER}" <<'PY'
           import json, sys
-          path = 'manifest.json'
-          with open(path, encoding='utf-8') as f:
-              data = json.load(f)
-          data['version'] = sys.argv[1]
-          with open(path, 'w', encoding='utf-8') as f:
-              json.dump(data, f, ensure_ascii=False, indent=2)
-              f.write('\n')
-          " "${VER}"
-          echo "manifest.json version -> ${VER}"
+          ver = sys.argv[1]
+          for path in ('manifest.json', 'firefox/manifest.json'):
+              with open(path, encoding='utf-8') as f:
+                  data = json.load(f)
+              data['version'] = ver
+              with open(path, 'w', encoding='utf-8') as f:
+                  json.dump(data, f, ensure_ascii=False, indent=2)
+                  f.write('\n')
+              print(f'{path} version -> {ver}')
+          PY
 
       # 发布前统一处理（去 dev 后缀、移除环境诊断区等）
       # 规则集中在 tools/prepare-release.js，与本地 build.ps1 调用同一脚本，保证两条路径一致
@@ -75,19 +76,72 @@ jobs:
       - name: Build extension zip
         run: |
           mkdir -p dist
-          zip -r "dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip" manifest.json _locales src
+          zip -r "dist/momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip" manifest.json _locales src
           # 打印 zip 内容清单，确认无 ../ 父目录访问器
-          unzip -l "dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip"
+          unzip -l "dist/momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip"
           ls -lh dist/
 
-      # 生成 SHA256 校验文件（发布后可用 sha256sum -c 验证下载包完整性）
+      # 打包 Firefox 扩展：Firefox 要求 manifest.json 位于包根，
+      # 因此单独组装（firefox 清单 + _locales + src）。
+      # prepare-release.js 已在上一步处理过源文件，两版规则一致。
+      - name: Build Firefox extension zip
+        run: |
+          rm -rf firefox-dist
+          mkdir -p firefox-dist
+          cp firefox/manifest.json firefox-dist/manifest.json
+          cp -r _locales src firefox-dist/
+          cd firefox-dist
+          zip -r "../dist/momoQRdecoder-firefox-v${{ steps.version.outputs.version }}.zip" manifest.json _locales src
+          unzip -l "../dist/momoQRdecoder-firefox-v${{ steps.version.outputs.version }}.zip"
+          cd ..
+          ls -lh dist/
+
+      # 计算 SHA256 校验值，直接写进 Release 说明（不再额外生成 SHA256SUMS.txt 附件）
+      # 用 heredoc 写入 GITHUB_ENV：两个 zip 会产生多行，普通的 KEY=value 写法会解析失败
       - name: Generate SHA256 checksums
         run: |
           cd dist
-          sha256sum *.zip > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-          echo "SHA=$(cat SHA256SUMS.txt)" >> "${GITHUB_ENV}"
+          SHA=$(sha256sum *.zip)
+          printf '%s\n' "${SHA}"
+          {
+            echo 'SHA<<EOF'
+            echo "${SHA}"
+            echo 'EOF'
+          } >> "${GITHUB_ENV}"
           cd ..
+
+      # 从 CHANGELOG.md 截取当前版本的小节，作为 Release 的「更新日志」
+      # 多行内容用 heredoc 写入 GITHUB_ENV
+      - name: Read changelog for this version
+        run: |
+          python3 - "${{ steps.version.outputs.version }}" <<'PY' >> "${GITHUB_ENV}"
+          import sys
+
+          sys.stdout.reconfigure(encoding='utf-8')
+
+          ver = sys.argv[1]
+          lines = open('CHANGELOG.md', encoding='utf-8').read().splitlines()
+
+          section = []
+          started = False
+          for line in lines:
+              if not started:
+                  if line.strip() == f'## v{ver}':
+                      started = True
+                  continue
+              if line.startswith('## v'):
+                  break
+              section.append(line)
+
+          body = '\n'.join(section).strip()
+          if not body:
+              print(f'CHANGELOG.md 中没有 v{ver} 的条目，使用默认文案', file=sys.stderr)
+              body = '- 暂无更新说明'
+
+          print('CHANGELOG_SECTION<<EOF')
+          print(body)
+          print('EOF')
+          PY
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
@@ -97,10 +151,16 @@ jobs:
           body: |
             ## momoQRdecoder v${{ steps.version.outputs.version }}
 
-            ### 安装
-            > **Edge 用户**：插件已上架 Edge 扩展商店，可直接在商店安装；以下手动安装方式适用于 **Chrome** 及其他 Chromium 浏览器。
+            ### 更新日志
+            ${{ env.CHANGELOG_SECTION }}
 
-            1. 下载 `momoQRdecoder-v${{ steps.version.outputs.version }}.zip`
+            ### 安装
+            > **Edge 用户**：插件已上架 Edge 扩展商店，可直接在商店安装。
+
+            > **Firefox 用户**：Firefox 版还在等 AMO 商店审核。附件里的 zip 未签名，正式版 Firefox 无法直接安装；实在要装，建议先问 AI 怎么处理，否则就再等等。
+
+            **Chrome / 其他 Chromium 浏览器**
+            1. 下载 `momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip`
             2. 解压后，在浏览器扩展管理页开启「开发者模式」
             3. 点击「加载已解压的扩展程序」，选择解压出的文件夹
 
@@ -109,11 +169,11 @@ jobs:
             ${{ env.SHA }}
             ```
 
-            > 校验方法：`sha256sum -c SHA256SUMS.txt`（Linux/macOS）或 `Get-FileHash`（Windows）
+            > 校验方法：在下载目录执行 `sha256sum momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip`（Linux/macOS）
+            > 或 `Get-FileHash .\momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip -Algorithm SHA256`（Windows），
+            > 把结果与上面的哈希逐字比对即可。
           files: |
             dist/*.zip
-            dist/SHA256SUMS.txt
-          generate_release_notes: true
 
       # ============ 自动发布到 Microsoft Edge Add-ons（可选） ============
       # 前提：Partner Center -> Publish API 启用并创建 API 凭据（新版 v1.1：Client ID + API Key）
@@ -124,7 +184,7 @@ jobs:
         if: env.EDGE_CLIENT_ID != '' && env.EDGE_API_KEY != '' && env.EDGE_PRODUCT_ID != ''
         run: |
           set -euo pipefail
-          ZIP="dist/momoQRdecoder-v${{ steps.version.outputs.version }}.zip"
+          ZIP="dist/momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip"
           URL="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}/submissions/draft/package"
           HTTP_CODE=$(curl -sS -D edge_upload_headers.txt -o edge_upload_body.json -w "%{http_code}" \
             -X POST \

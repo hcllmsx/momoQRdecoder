@@ -1,6 +1,6 @@
 # 默默二维码解码器 · momoQRdecoder
 
-Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3）。
+Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3），Firefox 版正在等待 AMO 商店审核。
 
 > [!IMPORTANT]
 > **上架状态**：
@@ -8,6 +8,8 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3）。
 > - 本扩展已上架 **Microsoft Edge 扩展商店**，可直接在商店搜索「默默二维码解码器」（或 MoMo QR Decoder）安装：[默默二维码解码器 - Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/phciegpefagfbgadpejnfjgkoncgmecl)。
 > 
 > - **Chrome 用户**：Chrome 商店暂未上架，请前往 [Releases](https://github.com/hcllmsx/momoQRdecoder/releases) 下载 zip 压缩包，按下方「使用」说明手动安装。
+>
+> - **Firefox 用户**：Firefox 版还在等 AMO 商店（addons.mozilla.org）审核，准备上架；正式安装方式待审核通过后提供。
 
 > [!IMPORTANT]
 > - 本扩展最初名为 **QRdecoder**（原仓库：hcllmsx/qrdecoder ）
@@ -29,21 +31,32 @@ Chrome / Edge 浏览器二维码自动识别扩展（Manifest V3）。
 2. 选择「立即扫描」「延迟扫描(3秒)」或「区域截图」
 3. 结果展示在弹窗或网页右上角悬浮窗，支持复制、新标签页打开
 
-## 开发者说明：版本号更新
+### Firefox
 
-版本号**唯一来源**是仓库根目录的 `VERSION` 文件（格式：`x.y.z` 或 `x.y.z.w`，如 `1.2.0`）。
+Firefox 版还在等 AMO 商店审核，准备上架；正式安装方式待审核通过后提供。
+
+## 开发者说明：版本号与发布
+
+版本号**唯一来源**是仓库根目录的 `VERSION` 文件（格式：`x.y.z` 或 `x.y.z.w`，如 `1.2.0`）。`manifest.json`（Chromium / Edge）与 `firefox/manifest.json`（Firefox）共用同一个版本号。
 
 > [!NOTE]
-> **开发版与商店版区分**：本地源码中扩展名带 ` dev` 后缀（如「默默二维码解码器 dev」），便于与商店版区分；`1-run_menu.bat` 与 CI 打包时会**自动去掉** ` dev` 后缀，商店包名仍是「默默二维码解码器」。请勿绕过脚本手动打包，以免 dev 后缀进入商店包。
+> **开发版与商店版区分**：本地源码中扩展名带 ` dev` 后缀（如「默默二维码解码器 dev」），便于与商店版区分；发布打包时会**自动去掉** ` dev` 后缀，商店包名仍是「默默二维码解码器」。
 >
-> 所有「发布前处理」规则（去 ` dev` 后缀、移除上传页的环境诊断区等）集中在 **`tools/prepare-release.js`**。`build.ps1` 与 `.github/workflows/release.yml` 调用的是**同一个脚本**，因此本地打包与 CI 打包行为始终一致；**新增或修改规则只需改这一个文件**，两条路径自动同步。
+> 所有「发布前处理」规则（去 ` dev` 后缀、移除上传页的环境诊断区等）集中在 **`tools/prepare-release.js`**，打包前由 `.github/workflows/release.yml` 统一调用；**新增或修改规则只需改这一个文件**。
 
-> [!IMPORTANT]
-> 修改了根目录 `VERSION` 文件中的版本号后，**必须运行一次 `1-run_menu.bat`**，它会自动把新版本号同步到 `manifest.json` 并完成打包。只有完成这一步，版本号才一致，**才能提交并推送到 GitHub**；否则推送后仓库内 `manifest.json` 的版本号仍是旧值。
+### 发版流程
+
+1. 更新 `VERSION`，并把两份 `manifest.json` 的 `version` 字段改为同一版本号
+2. 在 `CHANGELOG.md` 中补充 `## v<版本>` 小节
+3. 打 tag 并推送：`git tag v<版本>` → `git push origin v<版本>`
+4. GitHub Actions 自动校验版本、打包、创建 Release（附 Chromium / Firefox 两个 zip 及 SHA256），并按配置上传 Edge 商店
+
+> Tag 与 `VERSION` 不一致时工作流会直接失败。Release 页面的「更新日志」由工作流从 `CHANGELOG.md` 中对应 `## v<版本>` 的小节自动截取，发版前记得先补好该版本的条目。
 
 ## 常见问题
 
-- **美化二维码识别失败？** 微信引擎首次加载约 5MB WASM 与模型，稍慢属正常；浏览器低于 Chrome 109 时自动降级为仅 jsQR。
+- **美化二维码识别失败？** 微信引擎首次加载约 5MB WASM 与模型，稍慢属正常；浏览器低于 Chrome 109 时自动降级为仅 jsQR。Firefox 需 **154 及以上**。
+- **Firefox 下没有「读取剪贴板」按钮？** Firefox 不支持 `navigator.clipboard.read()`，请使用「上传文件」选择图片。
 - **悬浮二维码扫不到？** 使用「延迟扫描」，确保倒计时内二维码已完全显示。
 
 ## 致谢

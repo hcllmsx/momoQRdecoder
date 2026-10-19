@@ -1,7 +1,11 @@
 // background.js —— 截图、消息分发与结果通知
-// 依赖 jsQR.js 与 cropAndDecodeQRCode.js（同目录，经 importScripts 加载，
-// 相对路径以本文件所在 src/ 为基准，勿加 src/ 前缀）
-importScripts('jsQR.js', 'cropAndDecodeQRCode.js');
+// Chromium：作为 service worker 运行，用 importScripts 加载同目录依赖
+// （相对路径以本文件所在 src/ 为基准，勿加 src/ 前缀）。
+// Firefox：作为后台事件页运行，依赖由 manifest 的 background.scripts
+// 按顺序预加载；事件页里没有 importScripts，跳过即可。
+if (typeof importScripts === 'function') {
+  importScripts('jsQR.js', 'cropAndDecodeQRCode.js');
+}
 
 // ---------- 本地化辅助 ----------
 // service worker 中可直接使用 chrome.i18n；取不到翻译时回退 key
@@ -36,6 +40,17 @@ function isWechatUnreachable(err) {
     || /无响应|不可用|Receiving end|unavailable|not responding/i.test(err);
 }
 
+// captureVisibleTab 包装：Firefox 对可选参数校验更严格，
+// windowId 为空时不传该参数（Chrome 同样支持省略）。
+function captureVisibleTab(windowId, callback) {
+  const options = {format: 'png'};
+  if (typeof windowId === 'number') {
+    chrome.tabs.captureVisibleTab(windowId, options, callback);
+  } else {
+    chrome.tabs.captureVisibleTab(options, callback);
+  }
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // 注入区域截图脚本（popup 发起）
   if (msg.action === 'injectRegionScript') {
@@ -58,7 +73,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'qr_capture_for_select') {
     const tabId = sender.tab && sender.tab.id;
     if (typeof tabId !== 'number') return;
-    chrome.tabs.captureVisibleTab(sender.tab.windowId, {format: 'png'}, (dataUrl) => {
+    captureVisibleTab(sender.tab.windowId, (dataUrl) => {
       if (!dataUrl || chrome.runtime.lastError) {
         chrome.tabs.sendMessage(tabId, {
           __momoqrdecoder_select_screenshot: null,
@@ -86,7 +101,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return;
     }
     // 兼容旧协议（未携带 dataUrl）：重新截屏后裁剪
-    chrome.tabs.captureVisibleTab(sender.tab.windowId, {format: 'png'}, (dataUrl) => {
+    captureVisibleTab(sender.tab.windowId, (dataUrl) => {
       if (!dataUrl || chrome.runtime.lastError) {
         done({error: t('screenshotFailedPage')});
         return;
@@ -100,7 +115,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // 全页截图解码（popup 立即/延迟扫描）
   if (msg.action === 'decodeScreenshot') {
-    chrome.tabs.captureVisibleTab(null, {format: 'png'}, (dataUrl) => {
+    captureVisibleTab(null, (dataUrl) => {
       if (!dataUrl || chrome.runtime.lastError) {
         sendResponse({error: t('screenshotFail', [chrome.runtime.lastError ? chrome.runtime.lastError.message : t('unknownError')])});
         return;
@@ -141,44 +156,95 @@ function notifyTab(tabId, result) {
 // 回退到微信 WeChatQRCode 引擎（OpenCV WASM，运行于 offscreen
 // document，识别率高但体积大、首启慢）。
 
-let offscreenReady = null; // offscreen document 的初始化 Promise
+let offscreenReady = null; // offscreen 页面的初始化 Promise
+const OFFSCREEN_FRAME_ID = 'momoqrdecoder-offscreen-frame';
 
-// 确保 offscreen document 已创建
+// 确保承载 offscreen 页面的上下文已就绪。
+// Chromium 使用 chrome.offscreen API；Firefox 没有该 API（后台是事件页，
+// 本身拥有 DOM），改为在后台页里嵌入一个隐藏 iframe，消息协议保持一致。
 function ensureOffscreen() {
   if (offscreenReady) return offscreenReady;
   offscreenReady = (async () => {
-    if (typeof chrome.offscreen !== 'object' || !chrome.offscreen.createDocument) {
-      throw new Error(t('offscreenUnsupported'));
+    if (typeof chrome.offscreen === 'object' && chrome.offscreen.createDocument) {
+      await createChromeOffscreen();
+    } else {
+      await createFirefoxOffscreenFrame();
     }
-    // Chrome 116+ 有 hasDocument()；旧版本直接尝试创建，
-    // 若已存在会报错，此时当作已就绪处理。
-    let hasDoc = false;
-    if (typeof chrome.offscreen.hasDocument === 'function') {
-      try {
-        hasDoc = await chrome.offscreen.hasDocument();
-      } catch (e) {
-        hasDoc = false;
-      }
-    }
-    if (!hasDoc) {
-      try {
-        await chrome.offscreen.createDocument({
-          url: 'src/offscreen.html',
-          reasons: ['BLOBS'],
-          justification: t('offscreenJustification')
-        });
-      } catch (e) {
-        // "文档已存在"等场景：若创建失败因文档已在，视为就绪
-        if (e && /already|exists/i.test(String(e.message || e))) {
-          // 已就绪
-        } else {
-          offscreenReady = null; // 允许下次重试
-          throw e;
-        }
-      }
-    }
-  })();
+  })().catch((e) => {
+    offscreenReady = null; // 允许下次重试
+    throw e;
+  });
   return offscreenReady;
+}
+
+// Chromium：创建 offscreen document
+async function createChromeOffscreen() {
+  // Chrome 116+ 有 hasDocument()；旧版本直接尝试创建，
+  // 若已存在会报错，此时当作已就绪处理。
+  let hasDoc = false;
+  if (typeof chrome.offscreen.hasDocument === 'function') {
+    try {
+      hasDoc = await chrome.offscreen.hasDocument();
+    } catch (e) {
+      hasDoc = false;
+    }
+  }
+  if (hasDoc) return;
+  try {
+    await chrome.offscreen.createDocument({
+      url: 'src/offscreen.html',
+      reasons: ['BLOBS'],
+      justification: t('offscreenJustification')
+    });
+  } catch (e) {
+    // "文档已存在"等场景：若创建失败因文档已在，视为就绪
+    if (!(e && /already|exists/i.test(String(e.message || e)))) throw e;
+  }
+}
+
+// Firefox：在后台事件页内嵌入隐藏 iframe 承载 offscreen.html。
+// iframe 里的 offscreen.js 注册 runtime.onMessage 监听，
+// background 仍用 runtime.sendMessage 与它通信（不同 frame，可正常送达）。
+function createFirefoxOffscreenFrame() {
+  return new Promise((resolve, reject) => {
+    const existing = document.getElementById(OFFSCREEN_FRAME_ID);
+    const frame = existing || document.createElement('iframe');
+    let timer = null;
+
+    const cleanup = () => {
+      if (timer) { clearTimeout(timer); timer = null; }
+      frame.removeEventListener('load', onLoad);
+      frame.removeEventListener('error', onError);
+    };
+    const onLoad = () => {
+      cleanup();
+      frame.dataset.momoqrReady = '1';
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error(t('offscreenUnsupported')));
+    };
+
+    // 已加载完成的 iframe 直接复用（重试时不会再次触发 load）
+    if (existing && (existing.dataset.momoqrReady === '1' ||
+        (existing.contentDocument && existing.contentDocument.readyState === 'complete'))) {
+      existing.dataset.momoqrReady = '1';
+      resolve();
+      return;
+    }
+
+    frame.addEventListener('load', onLoad, {once: true});
+    frame.addEventListener('error', onError, {once: true});
+    timer = setTimeout(onError, 10000);
+
+    if (!existing) {
+      frame.id = OFFSCREEN_FRAME_ID;
+      frame.style.display = 'none';
+      frame.src = chrome.runtime.getURL('src/offscreen.html');
+      (document.body || document.documentElement).appendChild(frame);
+    }
+  });
 }
 
 // 向 offscreen 发送解码请求并等待响应。

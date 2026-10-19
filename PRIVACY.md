@@ -1,6 +1,6 @@
 # 隐私政策
 
-**更新日期**：2026-08-28
+**更新日期**：2026-10-18
 
 本隐私政策适用于浏览器扩展「默默二维码解码器」（momoQRdecoder，以下简称"本扩展"）。
 
@@ -21,12 +21,15 @@
 
 本扩展申请了以下浏览器权限，仅用于实现核心功能，不用于任何数据采集：
 
-| 权限 | 用途 |
-| --- | --- |
-| `activeTab` | 在您主动操作时截取当前标签页画面以识别二维码 |
-| `clipboardWrite` / `clipboardRead` | 在您主动点击"复制"时读取/写入剪贴板 |
-| `scripting` | 注入区域截图选区与结果通知脚本 |
-| `offscreen` | 在后台离屏文档中运行微信二维码识别引擎（Manifest V3 要求） |
+| 权限 | 用途 | 适用版本 |
+| --- | --- | --- |
+| `activeTab` | 在您主动操作时截取当前标签页画面以识别二维码 | Chromium / Firefox |
+| `clipboardWrite` | 在您主动点击"复制"时写入剪贴板 | Chromium / Firefox |
+| `clipboardRead` | 在您主动点击"读取剪贴板"时读取剪贴板图片（Firefox 不支持该权限） | 仅 Chromium |
+| `scripting` | 注入区域截图选区与结果通知脚本 | Chromium / Firefox |
+| `offscreen` | 在后台离屏文档中运行微信二维码识别引擎（Manifest V3 要求） | 仅 Chromium |
+
+Firefox 版没有 `offscreen` API，改为在后台事件页中用隐藏 iframe 托管同一套本地引擎，数据处理方式与上述说明完全一致。
 
 ## 四、数据存储
 

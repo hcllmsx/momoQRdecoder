@@ -10,6 +10,10 @@ document.querySelectorAll('[data-i18n]').forEach(el => {
   if (msg) el.textContent = msg;
 });
 
+// 文档标题跟随界面语言（html 里写死的是英文名，这里按浏览器语言覆盖）。
+// chrome.i18n 在 Chromium(Chrome/Edge) 与 Firefox 上行为一致，两个构建共用本文件。
+document.title = chrome.i18n.getMessage('extName') || 'momoQRdecoder';
+
 const scanBtn = document.getElementById('scanBtn');
 const delayBtn = document.getElementById('delayBtn');
 const regionBtn = document.getElementById('regionBtn');
@@ -279,15 +283,16 @@ function showUploadBtns() {
   uploadGroup.id = 'qr-upload-group';
   uploadGroup.style.textAlign = 'center';
 
-  // 读取剪贴板
-  const btnClipboard = document.createElement('button');
-  btnClipboard.textContent = t('readClipboard');
-  btnClipboard.className = 'btn blue';
-  btnClipboard.style.marginRight = '12px';
-  btnClipboard.onclick = async () => {
-    btnClipboard.disabled = true;
-    try {
-      if (navigator.clipboard && navigator.clipboard.read) {
+  // 读取剪贴板图片：Firefox 不支持 navigator.clipboard.read，
+  // 仅在支持的环境显示该按钮（Firefox 只保留上传文件入口）。
+  if (navigator.clipboard && typeof navigator.clipboard.read === 'function') {
+    const btnClipboard = document.createElement('button');
+    btnClipboard.textContent = t('readClipboard');
+    btnClipboard.className = 'btn blue';
+    btnClipboard.style.marginRight = '12px';
+    btnClipboard.onclick = async () => {
+      btnClipboard.disabled = true;
+      try {
         const items = await navigator.clipboard.read();
         for (const item of items) {
           for (const type of item.types) {
@@ -302,16 +307,14 @@ function showUploadBtns() {
           }
         }
         showError(t('clipboardNoImage'));
-      } else {
-        showError(t('clipboardUnsupported'));
+      } catch (e) {
+        showError(t('clipboardFail', [e.message]));
+      } finally {
+        btnClipboard.disabled = false;
       }
-    } catch (e) {
-      showError(t('clipboardFail', [e.message]));
-    } finally {
-      btnClipboard.disabled = false;
-    }
-  };
-  uploadGroup.appendChild(btnClipboard);
+    };
+    uploadGroup.appendChild(btnClipboard);
+  }
 
   // 上传入口按环境分流：
   // 移动端 popup 无法唤起系统文件选择器（真机验证），直接给"在新页面上传"，

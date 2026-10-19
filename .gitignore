@@ -5,4 +5,5 @@ node_modules/
 *.pem
 1-run_menu.bat
 build.ps1
+LOCAL_BUILD.md
 STORE_LISTING.md
