@@ -10,4 +10,4 @@ node_modules/
 1-run_menu.bat
 build.ps1
 LOCAL_BUILD.md
-STORE_LISTING.md
+*_STORE_LISTING.md
