@@ -1,3 +1,8 @@
+> [!TIP]
+> - 本扩展最初名为 **QRdecoder**（原仓库：hcllmsx/qrdecoder ）
+> 
+> - 现更名为 **momoQRdecoder · 默默二维码解码器**，仓库链接也变更为 [hcllmsx/momoQRdecoder](https://github.com/hcllmsx/momoQRdecoder) 
+
 # 默默二维码解码器 · momoQRdecoder
 
 这是一个 Chrome / Edge / Firefox 浏览器二维码识别扩展
@@ -6,15 +11,11 @@
 > **上架状态**：
 >
 > - 本扩展已上架 **Microsoft Edge 扩展商店**，可直接在商店搜索「默默二维码解码器」（或 MoMo QR Decoder）安装：[默默二维码解码器 - Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/phciegpefagfbgadpejnfjgkoncgmecl)。
+>
+> - 本扩展已上架 **Firefox 附加组件商店（AMO）**，可直接在商店搜索「默默二维码解码器」（或 momoQRdecoder）安装：[momoQRdecoder – Firefox Add-ons (AMO)](https://addons.mozilla.org/zh-CN/firefox/addon/momoqrdecoder/)。
 > 
 > - **Chrome 用户**：Chrome 商店暂未上架，请前往 [Releases](https://github.com/hcllmsx/momoQRdecoder/releases) 下载 zip 压缩包，按下方「使用」说明手动安装。
 >
-> - **Firefox 用户**：Firefox 版还在等 AMO 商店（addons.mozilla.org）审核，准备上架；正式安装方式待审核通过后提供。
-
-> [!IMPORTANT]
-> - 本扩展最初名为 **QRdecoder**（原仓库：hcllmsx/qrdecoder ）
-> 
-> - 现更名为 **momoQRdecoder · 默默二维码解码器**，仓库链接也变更为 [hcllmsx/momoQRdecoder](https://github.com/hcllmsx/momoQRdecoder) 
 
 ## 功能
 
@@ -29,8 +30,8 @@
 
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
-| Chrome / Edge（桌面） | 支持 | 全部功能 |
-| Firefox（桌面，154+） | 支持 | 全部功能，正在等待 AMO 商店审核 |
+| Chrome / Edge（桌面） | 支持 | 全部功能，已上架[Microsoft Edge 扩展商店](https://microsoftedge.microsoft.com/addons/detail/phciegpefagfbgadpejnfjgkoncgmecl) |
+| Firefox（桌面，154+） | 支持 | 无读取剪切板（不支持），已上架 [AMO 商店](https://addons.mozilla.org/zh-CN/firefox/addon/momoqrdecoder/) |
 | Edge（Android） | 支持 | 「立即扫描」「上传图片」；延迟扫描与区域截图依赖鼠标操作，移动端自动隐藏 |
 | Firefox（Android） | 暂不支持 | 尚未适配与验证 |
 | iOS（Edge / Chrome / Safari） | 不支持 | iOS 版 Edge、Chrome 不提供扩展机制；Safari 支持 Web Extension，但本项目未提供 Safari 版本 |
@@ -40,10 +41,6 @@
 1. 安装后点击浏览器工具栏图标
 2. 选择「立即扫描」「延迟扫描(3秒)」或「区域截图」
 3. 结果展示在弹窗或网页右上角悬浮窗，支持复制、新标签页打开
-
-### Firefox
-
-Firefox 版还在等 AMO 商店审核，准备上架；正式安装方式待审核通过后提供。
 
 ### 手机端（Edge Android）
 

@@ -11,3 +11,4 @@ node_modules/
 build.ps1
 LOCAL_BUILD.md
 *_STORE_LISTING.md
+.workbuddy/

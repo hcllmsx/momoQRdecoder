@@ -169,7 +169,7 @@ jobs:
             ### 安装
             > **Edge 用户**：插件已上架 Edge 扩展商店，可直接在商店安装。
 
-            > **Firefox 用户**：Firefox 版还在等 AMO 商店审核。附件里的 zip 未签名，正式版 Firefox 无法直接安装；实在要装，建议先问 AI 怎么处理，否则就再等等。
+            > **Firefox 用户**：Firefox 版已上架 AMO 商店，推荐直接安装：[momoQRdecoder – Firefox Add-ons](https://addons.mozilla.org/zh-CN/firefox/addon/momoqrdecoder/)。附件里的 zip 未签名，仅供开发测试，正式版 Firefox 无法直接安装。
 
             **Chrome / 其他 Chromium 浏览器**
             1. 下载 `momoQRdecoder-chrome-v${{ steps.version.outputs.version }}.zip`
